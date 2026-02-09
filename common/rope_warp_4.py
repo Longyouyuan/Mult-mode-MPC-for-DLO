@@ -23,7 +23,7 @@ def gravity_air_force(v: wp.vec3, mg: float, air_drag: float) -> wp.vec3:
 @wp.func
 def linear_spring_damping(pi: wp.vec3, pj: wp.vec3, vi: wp.vec3, vj: wp.vec3,
                          k: float, damping: float, rest_length: float) -> wp.vec3:
-    # 对应 warp2 弹簧段力计算 :contentReference[oaicite:1]{index=1}
+
     dx = pj - pi
     l = wp.length(dx)
     d = dx / (l + 1.0e-8)
@@ -39,7 +39,7 @@ def bending_spring(
     p0: wp.vec3, p1: wp.vec3, p2: wp.vec3,
     bending_k: float
 ) -> wp.mat33:
-    # 对齐 rope.py _bending_spring_force 的计算：:contentReference[oaicite:3]{index=3}
+
     dx1 = p1 - p0
     l1 = wp.length(dx1)
     d1 = dx1 / (l1 + 1.0e-8)
@@ -120,6 +120,72 @@ def bending_damper(p0: wp.vec3, p1: wp.vec3, p2: wp.vec3,
 
 
 @wp.func
+def bending_spring_damper(
+    p0: wp.vec3, p1: wp.vec3, p2: wp.vec3,
+    v0: wp.vec3, v1: wp.vec3, v2: wp.vec3,
+    bending_k: float, bending_damping: float
+) -> wp.mat33:
+
+    # --- shared geometry (exactly same ops as your funcs) ---
+    dx1 = p1 - p0
+    l1 = wp.length(dx1)
+    d1 = dx1 / (l1 + 1.0e-8)
+
+    dx2 = p2 - p1
+    l2 = wp.length(dx2)
+    d2 = dx2 / (l2 + 1.0e-8)
+
+    cr = wp.cross(d1, d2)
+
+    F0 = wp.vec3(0.0, 0.0, 0.0)
+    F1 = wp.vec3(0.0, 0.0, 0.0)
+    F2 = wp.vec3(0.0, 0.0, 0.0)
+
+    # --- spring part (same as bending_spring) ---
+    if bending_k != 0.0:
+        c = wp.dot(d1, d2)
+        c = wp.clamp(c, -1.0 + 1.0e-8, 1.0 - 1.0e-8)
+        beta = wp.acos(c)
+
+        sb = wp.sin(beta)
+        scale = bending_k * beta / (sb + 1.0e-8)
+        common = scale * cr
+
+        pre = -(wp.cross(d1, common)) / (l1 + 1.0e-8)
+        aft = -(wp.cross(d2, common)) / (l2 + 1.0e-8)
+
+        F0 = F0 + (-pre)
+        F1 = F1 + (pre + aft)
+        F2 = F2 + (-aft)
+
+    # --- damping part (same as bending_damper) ---
+    if bending_damping != 0.0:
+        c1 = cr
+
+        grad_d1 = wp.cross(d1, c1)
+        norm_grad_d1 = wp.length(grad_d1)
+        dbeta_de1 = grad_d1 / (norm_grad_d1 * l1 + 1.0e-8)
+
+        grad_d2 = wp.cross(d2, -c1)
+        norm_grad_d2 = wp.length(grad_d2)
+        dbeta_de2 = grad_d2 / (norm_grad_d2 * l2 + 1.0e-8)
+
+        vel_diff1 = v1 - v0
+        vel_diff2 = v2 - v1
+        dbeta_dt = wp.dot(dbeta_de1, vel_diff1) + wp.dot(dbeta_de2, vel_diff2)
+
+        tmp = bending_damping * dbeta_dt
+        D1 = tmp * dbeta_de1
+        D2 = -tmp * dbeta_de2
+
+        F0 = F0 + D1
+        F1 = F1 + (-(D1 + D2))
+        F2 = F2 + D2
+
+    return wp.matrix_from_cols(F0, F1, F2)
+
+
+@wp.func
 def mat_col0(m: wp.mat33) -> wp.vec3:
     # 取第0列
     return wp.vec3(m[0, 0], m[1, 0], m[2, 0])
@@ -169,10 +235,6 @@ def simulate_tiled(
         if mode != 0:  # vel
             vel[b, 0] = control[b, idx]
 
-        # 0) 清零 f
-        f_zero = wp.tile_zeros(shape=(P,), dtype=wp.vec3)
-        wp.tile_store(f[b], f_zero)
-
         # 1) 重力 + 空阻（这里不用 tile_map，直接用 tile 算）
         v_tile = wp.tile_load(vel[b], P)
         ga_tile = wp.tile_map(gravity_air_force, v_tile, mg, air_drag)
@@ -194,29 +256,18 @@ def simulate_tiled(
             bp1 = wp.tile_load(pos[b], B, offset=1)
             bp2 = wp.tile_load(pos[b], B, offset=2)
 
-            # --- bending spring ---
-            if bending_k != 0.0:
-                bendKM = wp.tile_map(bending_spring, bp0, bp1, bp2, bending_k)
-                bk0 = wp.tile_map(mat_col0, bendKM)
-                bk1 = wp.tile_map(mat_col1, bendKM)
-                bk2 = wp.tile_map(mat_col2, bendKM)
-                wp.tile_atomic_add(f[b], bk0, offset=0)
-                wp.tile_atomic_add(f[b], bk1, offset=1)
-                wp.tile_atomic_add(f[b], bk2, offset=2)
+            bv0 = wp.tile_load(vel[b], B, offset=0)
+            bv1 = wp.tile_load(vel[b], B, offset=1)
+            bv2 = wp.tile_load(vel[b], B, offset=2)
 
-            # --- bending damping (你现有的) ---
-            if bending_damping != 0.0:
-                bv0 = wp.tile_load(vel[b], B, offset=0)
-                bv1 = wp.tile_load(vel[b], B, offset=1)
-                bv2 = wp.tile_load(vel[b], B, offset=2)
+            bendM = wp.tile_map(bending_spring_damper, bp0, bp1, bp2, bv0, bv1, bv2, bending_k, bending_damping)
 
-                bendDM = wp.tile_map(bending_damper, bp0, bp1, bp2, bv0, bv1, bv2, bending_damping)
-                bf0 = wp.tile_map(mat_col0, bendDM)
-                bf1 = wp.tile_map(mat_col1, bendDM)
-                bf2 = wp.tile_map(mat_col2, bendDM)
-                wp.tile_atomic_add(f[b], bf0, offset=0)
-                wp.tile_atomic_add(f[b], bf1, offset=1)
-                wp.tile_atomic_add(f[b], bf2, offset=2)
+            b0 = wp.tile_map(mat_col0, bendM)
+            b1 = wp.tile_map(mat_col1, bendM)
+            b2 = wp.tile_map(mat_col2, bendM)
+            wp.tile_atomic_add(f[b], b0, offset=0)
+            wp.tile_atomic_add(f[b], b1, offset=1)
+            wp.tile_atomic_add(f[b], b2, offset=2)
 
         # 4) 控制作用到第 0 粒子
         if mode == 0:  # acc
@@ -273,10 +324,10 @@ class WarpRope:
         self.traj = wp.zeros((self.batch_size, self.max_frames, P), dtype=wp.vec3, device="cuda")
 
         # ✅ 推荐布局：(B, P) of vec3
-        self.pos = wp.zeros((self.batch_size, P), dtype=wp.vec3, device="cuda")
-        self.vel = wp.zeros((self.batch_size, P), dtype=wp.vec3, device="cuda")
+        self.pos = None
+        self.vel = None
         self.f   = wp.zeros((self.batch_size, P), dtype=wp.vec3, device="cuda")
-        self.control = wp.zeros((self.batch_size,), dtype=wp.vec3, device="cuda")
+        self.control = None
 
     def set_state_and_action(self, pos, vel, action):
         pos = pos.expand(self.batch_size, -1, -1).contiguous()
@@ -288,7 +339,8 @@ class WarpRope:
         expected_timesteps = self.max_record_steps // self.ctr_period
         if action.shape[-2] != expected_timesteps:
             raise ValueError(
-                f"Action 'frametime' dimension mismatch: got {action.shape[1]}, expected {expected_timesteps} (steps={steps}, ctr_period={ctr_period})"
+                f"Action timeframe mismatch: got {action.shape[-2]}, expected {expected_timesteps} "
+                f"(steps={self.max_record_steps}, ctr_period={self.ctr_period})"
             )
         if action.dim() == 2:  # (T, 3)
             action = action.expand(self.batch_size, -1,-1).contiguous()
@@ -329,8 +381,8 @@ if __name__ == "__main__":
     # sampled_data = np.load('../data/fixed_tip_pos_high.npy').astype(np.float32)
     # sampled_data = np.load('../data/fixed_tip_pos_low.npy').astype(np.float32)
     # sampled_data = np.load('../data/fixed_tip_horizontal_init.npy').astype(np.float32)
-    # sampled_data = np.load('../data/pos_low_with_xyz_drive.npy').astype(np.float32)
-    sampled_data = np.load('../data/static_init_with_xyz_drive.npy').astype(np.float32)
+    sampled_data = np.load('../data/pos_low_with_xyz_drive.npy').astype(np.float32)
+    # sampled_data = np.load('../data/static_init_with_xyz_drive.npy').astype(np.float32)
     position_data, velocity_data, control_sequence = mj_data_to_my_data(N, sampled_data, device)
 
     ctr_period = 1
@@ -341,13 +393,13 @@ if __name__ == "__main__":
         k=10000 * 0.46,
         damping=0.2,
         bending_k=0.0006712,
-        bending_damping=0.000401,   # warp2 的 damping_bend :contentReference[oaicite:6]{index=6}
+        bending_damping=0.000401,
         air_drag=0.2206 / 1000,
         g=10.07,
         max_record_steps=10000,
         record_interval=10,
         ctr_period=ctr_period,
-        mode='acc',
+        mode='vel',
         dt=0.001
     )
 
@@ -360,7 +412,7 @@ if __name__ == "__main__":
     record_interval = 10
     # plot_animation_3d(traj_warp, dt, record_interval, L, repeat=True, batch_idx=0)
 
-    model_compare = 1
+    model_compare = 0
     if model_compare:
         # === Parameters ===
         N = 20  # Number of segments
@@ -394,7 +446,7 @@ if __name__ == "__main__":
                 velocity_data[show_start:show_start + 1],
                 control_sequence[show_start:].unsqueeze(0),
                 steps=int(10000),
-                mode='acc',
+                mode='vel',
                 record_interval=record_interval
             )
         print("done!")
@@ -415,7 +467,8 @@ if __name__ == "__main__":
         steps = 10000
         t0 = time.perf_counter()
         for _ in range(n):
-            sim.simulate(steps=steps)
+            sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:10000 // ctr_period])
+            traj_warp = sim.simulate(steps=steps)
         wp.synchronize()
         t1 = time.perf_counter()
         print("Average time:", (t1 - t0) / n)
