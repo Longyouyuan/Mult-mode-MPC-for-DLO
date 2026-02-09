@@ -358,6 +358,7 @@ class Rope(nn.Module):
             velocities[:, 0] = control_input
             current_accelerations = self.dynamics(positions, velocities, torch.zeros_like(control_input))
 
+
             next_velocities = velocities + self.dt_tensor * current_accelerations
             next_positions = positions + self.dt_tensor * next_velocities
 

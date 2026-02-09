@@ -140,7 +140,10 @@ def simulate_tiled(
     pos: wp.array2d(dtype=wp.vec3),
     vel: wp.array2d(dtype=wp.vec3),
     f:   wp.array2d(dtype=wp.vec3),
-    control: wp.array(dtype=wp.vec3),
+    
+    control: wp.array2d(dtype=wp.vec3),
+    ctr_period: int,
+    mode: int,   # 0=acc, 1=vel
 
     traj: wp.array3d(dtype=wp.vec3),   # (B, frames, P)
     record_interval: int,
@@ -160,6 +163,11 @@ def simulate_tiled(
     b = wp.tid()  # launch_tiled(dim=[B])
 
     for s in range(steps):
+
+        idx = s // ctr_period
+
+        if mode != 0:  # vel
+            vel[b, 0] = control[b, idx]
 
         # 0) 清零 f
         f_zero = wp.tile_zeros(shape=(P,), dtype=wp.vec3)
@@ -210,12 +218,19 @@ def simulate_tiled(
                 wp.tile_atomic_add(f[b], bf1, offset=1)
                 wp.tile_atomic_add(f[b], bf2, offset=2)
 
-        # 4) 控制作用到第 0 粒子（warp2：if i==0 f[b,0]=control[b]*mass）:contentReference[oaicite:4]{index=4}
-        f[b, 0] = control[b] * mass
+        # 4) 控制作用到第 0 粒子
+        if mode == 0:  # acc
+            f[b, 0] = control[b, idx] * mass
+        else:  # vel
+            f[b, 0] = wp.vec3(0.0, 0.0, 0.0)
 
-        # 5) 积分（显式欧拉，warp2 同款）:contentReference[oaicite:5]{index=5}
+        # 5) 积分 (显式欧拉)
         f_tile = wp.tile_load(f[b], P)
         v_new = v_tile + (dt / mass) * f_tile
+
+        # if mode != 0: # vel (to keep the same with rope.py)
+        #     v_new[0] = control[b, idx]
+
         p_tile = wp.tile_load(pos[b], P)
         p_new = p_tile + dt * v_new
 
@@ -234,7 +249,7 @@ def simulate_tiled(
 class WarpRope:
     def __init__(self, batch_size=1280, L=1.0, mass=0.005, k=500.0, damping=2.0, bending_k=0.0,
                  bending_damping=0.0, air_drag=0.0, g=9.81, dt=0.001,
-                 max_record_steps=10000, record_interval=10, ctr_freq=25):
+                 max_record_steps=10000, record_interval=10, ctr_period=25, mode='acc'):
 
         self.batch_size = int(batch_size)
         self.L = float(L)
@@ -248,10 +263,11 @@ class WarpRope:
         self.dt = float(dt)
         self.dx = self.L / float(N)  # N 固定
 
-        self.ctr_freq = ctr_freq
+        self.ctr_period = ctr_period
+        self.mode = mode
 
         self.record_interval = int(record_interval)
-        self.max_record_steps = int(max_record_steps)
+        self.max_record_steps = int(max_record_steps)  # make sure: max_record_steps = 运行的steps
         self.max_frames = self.max_record_steps // self.record_interval
         # traj: (B, frames, P)
         self.traj = wp.zeros((self.batch_size, self.max_frames, P), dtype=wp.vec3, device="cuda")
@@ -262,19 +278,36 @@ class WarpRope:
         self.f   = wp.zeros((self.batch_size, P), dtype=wp.vec3, device="cuda")
         self.control = wp.zeros((self.batch_size,), dtype=wp.vec3, device="cuda")
 
-    def set_state(self, pos, vel):
+    def set_state_and_action(self, pos, vel, action):
         pos = pos.expand(self.batch_size, -1, -1).contiguous()
         self.pos = wp.from_torch(pos, dtype=wp.vec3)
         vel = vel.expand(self.batch_size, -1, -1).contiguous()
         self.vel = wp.from_torch(vel, dtype=wp.vec3)
+        
+        # Check dimension
+        expected_timesteps = self.max_record_steps // self.ctr_period
+        if action.shape[-2] != expected_timesteps:
+            raise ValueError(
+                f"Action 'frametime' dimension mismatch: got {action.shape[1]}, expected {expected_timesteps} (steps={steps}, ctr_period={ctr_period})"
+            )
+        if action.dim() == 2:  # (T, 3)
+            action = action.expand(self.batch_size, -1,-1).contiguous()
+            self.control = wp.from_torch(action, dtype=wp.vec3)
+        elif action.dim() == 3:  # (B, T, 3)
+            self.control = wp.from_torch(action.contiguous(), dtype=wp.vec3)
 
     def simulate(self, steps=1000, block_dim=TILE_THREADS):
+
+        if self.mode == 'acc':
+            mode_int = 0
+        else:
+            mode_int = 1
 
         wp.launch_tiled(
             simulate_tiled,
             dim=[self.batch_size],
             inputs=[
-                self.pos, self.vel, self.f, self.control,
+                self.pos, self.vel, self.f, self.control, self.ctr_period, mode_int,
                 self.traj, self.record_interval, self.max_frames,
                 self.mg, self.k, self.damping, self.bending_k, self.bending_damping,
                 self.air_drag, self.dx,
@@ -295,9 +328,12 @@ if __name__ == "__main__":
 
     # sampled_data = np.load('../data/fixed_tip_pos_high.npy').astype(np.float32)
     # sampled_data = np.load('../data/fixed_tip_pos_low.npy').astype(np.float32)
-    sampled_data = np.load('../data/fixed_tip_horizontal_init.npy').astype(np.float32)
+    # sampled_data = np.load('../data/fixed_tip_horizontal_init.npy').astype(np.float32)
+    # sampled_data = np.load('../data/pos_low_with_xyz_drive.npy').astype(np.float32)
+    sampled_data = np.load('../data/static_init_with_xyz_drive.npy').astype(np.float32)
     position_data, velocity_data, control_sequence = mj_data_to_my_data(N, sampled_data, device)
 
+    ctr_period = 1
     sim = WarpRope(
         batch_size=1280,
         L=1.0,
@@ -310,14 +346,15 @@ if __name__ == "__main__":
         g=10.07,
         max_record_steps=10000,
         record_interval=10,
-        ctr_freq=25,
+        ctr_period=ctr_period,
+        mode='acc',
         dt=0.001
     )
 
-    sim.set_state(position_data[0:1], velocity_data[0:1])
-
+    sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:10000//ctr_period])
     traj_warp = sim.simulate(steps=10000)
     print("Trajectory shape:", traj_warp.shape)
+
     dt = 0.001
     L = 1.0
     record_interval = 10
@@ -357,6 +394,7 @@ if __name__ == "__main__":
                 velocity_data[show_start:show_start + 1],
                 control_sequence[show_start:].unsqueeze(0),
                 steps=int(10000),
+                mode='acc',
                 record_interval=record_interval
             )
         print("done!")

@@ -492,8 +492,8 @@ def plot_animation_two_ropes_3d_2(positions1, positions2, dt, record_interval, L
         ax.set_ylim(-1.0, 1.0)
         ax.set_zlim(0.0, 2.0)
 
-        # 视角（这里是从 +Y 方向看 XZ 平面，你原来的：elev=0, azim=-90）
-        ax.view_init(elev=0, azim=-90)  # 稍微有点俯视，不那么扁
+        # # 视角（这里是从 +Y 方向看 XZ 平面，你原来的：elev=0, azim=-90）
+        # ax.view_init(elev=0, azim=-90)  # 稍微有点俯视，不那么扁
 
         # 坐标轴标签
         ax.set_xlabel("X")
