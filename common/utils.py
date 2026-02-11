@@ -204,7 +204,7 @@ def plot_animation_3d_traj(
     Renders 3D animation of rope motion with a highlighed target trajectory point.
 
     Args:
-        positions: Tensor [batch, frames, nodes, 3]
+        positions: Tensor [frames, nodes, 3]
         target_traj: Tensor [frames, 3] – target positions at each time
     """
     positions_np = positions.cpu().numpy()  # [frames, nodes, 3]
@@ -686,6 +686,452 @@ def plot_animation_two_ropes(positions1, positions2, dt, record_interval, L, rep
     return ani
 
 
+class LiveMPCVisualizer:
+    def __init__(self, goal_traj, refresh_pause=0.001, margin=0.05):
+        """
+        goal_traj: (T,3) torch/numpy，初始化时传入，用它确定坐标轴范围
+        refresh_pause: plt.pause 的刷新间隔
+        margin: 给范围加一点边距（相对最大跨度的比例）
+        """
+        plt.ion()
+        self.fig = plt.figure(figsize=(7, 7))
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.refresh_pause = refresh_pause
+
+        self.goal_traj = None
+        self._axis_center = None  # (3,)
+        self._axis_half = None    # float
+
+        self.set_goal(goal_traj, margin=margin)  # ✅ 初始化就设 goal，并计算轴范围
+
+    def _to_np(self, x):
+        if x is None:
+            return None
+        if hasattr(x, "detach"):
+            return x.detach().cpu().numpy()
+        return np.asarray(x)
+
+    def set_goal(self, goal_traj, margin=0.05):
+        """
+        根据 goal_traj 设定坐标轴范围：
+        - zmin 强制为 0
+        - 三轴等比例：用最大跨度决定 half range
+        """
+        goal_np = self._to_np(goal_traj)
+        if goal_np is None or goal_np.ndim != 2 or goal_np.shape[1] != 3:
+            raise ValueError("goal_traj must be (T,3)")
+
+        self.goal_traj = goal_np
+
+        mins = goal_np.min(axis=0)
+        maxs = goal_np.max(axis=0)
+
+        # ✅ z 最小值固定为 0
+        mins[2] = 0.0
+
+        center = 0.5 * (mins + maxs)
+        span = (maxs - mins)
+        half = 0.5 * float(np.max(span))
+
+        # 给一点边距，避免贴边（按最大跨度比例）
+        half = half * (1.0 + float(margin))
+        half = max(half, 1e-6)
+
+        self._axis_center = center
+        self._axis_half = half
+
+    def _apply_equal_axis(self):
+        c = self._axis_center
+        h = self._axis_half
+        ax = self.ax
+        ax.set_xlim(c[0] - h, c[0] + h)
+        ax.set_ylim(c[1] - h, c[1] + h)
+
+        # ✅ z 最小值为 0（并且仍保持等比例：如果 c[2]-h < 0，则把 z 向上推）
+        zmin = c[2] - h
+        zmax = c[2] + h
+        if zmin < 0.0:
+            shift = -zmin
+            zmin += shift
+            zmax += shift
+        ax.set_zlim(zmin, zmax)
+
+    def update(self, rope_pos, cur_i=0,
+               cand_tip_traj=None, cand_cost=None, best_k_traj=None,
+               title=""):
+        """
+        rope_pos:      (P,3) torch/numpy
+        cur_i:         int, current mpc step index
+        cand_tip_traj: (K,H,3) torch/numpy
+        cand_cost:     (K,) torch/numpy
+        best_k_traj:   (bestK,H,3) torch/numpy
+        """
+        rope_np = self._to_np(rope_pos)
+        goal_np = self.goal_traj
+
+        cand_np = self._to_np(cand_tip_traj)
+        cost_np = self._to_np(cand_cost)
+        best_np = self._to_np(best_k_traj)
+
+        ax = self.ax
+        ax.clear()
+
+        # ---- axes style ----
+        self._apply_equal_axis()  # ✅ 每帧按 goal 设定好的等比例范围
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+        ax.set_title(title)
+        ax.grid(True)
+
+        # ---- plot rope ----
+        if rope_np is not None:
+            ax.plot(rope_np[:, 0], rope_np[:, 1], rope_np[:, 2],
+                    'o-', lw=1.5, color='crimson', markersize=1.5, label='Rope')
+
+            # Tip：你注释写“TOP tip = first particle”，这里继续用 0
+            ax.scatter(rope_np[0, 0], rope_np[0, 1], rope_np[0, 2],
+                       color='blue', s=30, label='Tip')
+
+        # ---- goal traj + current target ----
+        if goal_np is not None and goal_np.shape[0] > 0:
+            ax.plot(goal_np[:, 0], goal_np[:, 1], goal_np[:, 2],
+                    '--', lw=2.0, color='gray', alpha=0.5, label='Target Trajectory')
+
+            gi = int(np.clip(cur_i, 0, goal_np.shape[0] - 1))
+            target = goal_np[gi]
+            ax.scatter(target[0], target[1], target[2],
+                       color='green', s=40, label='Target')
+
+        # ---- candidates (low reward=red, high=green) ----
+        if cand_np is not None and cand_np.shape[0] > 0:
+            cmap = plt.get_cmap("RdYlGn")
+
+            if cost_np is not None and cost_np.shape[0] == cand_np.shape[0]:
+                reward = -cost_np
+                rmin, rmax = float(reward.min()), float(reward.max())
+                denom = (rmax - rmin) if (rmax - rmin) > 1e-8 else 1.0
+                w = (reward - rmin) / denom  # [0,1]
+            else:
+                w = np.full((cand_np.shape[0],), 0.5, dtype=np.float32)
+
+            for k in range(cand_np.shape[0]):
+                tr = cand_np[k]
+                ax.plot(tr[:, 0], tr[:, 1], tr[:, 2],
+                        lw=1.0, alpha=0.25, color=cmap(float(w[k])))
+
+        # ---- best trajectories ----
+        if best_np is not None and best_np.shape[0] > 0:
+            # 用绿色突出 best（也符合你“好=绿”的语义）
+            for j in range(best_np.shape[0]):
+                tr = best_np[j]
+                ax.plot(tr[:, 0], tr[:, 1], tr[:, 2],
+                        lw=1.5, alpha=0.8, color='blue',
+                        label='Best' if j == 0 else None)
+
+        # ---- legend (clean) ----
+        handles, labels = ax.get_legend_handles_labels()
+        if cand_np is not None and cand_np.shape[0] > 0:
+            from matplotlib.lines import Line2D
+            cand_proxy = Line2D([0], [0], color='gray', lw=1.5, alpha=0.35)
+            handles.append(cand_proxy)
+            labels.append(f"Candidates (K={cand_np.shape[0]})")
+
+        ax.legend(handles, labels, loc='best')
+
+        plt.pause(self.refresh_pause)
+
+    def close(self):
+        plt.ioff()
+        plt.close(self.fig)
+
+
+def _remove_near_duplicates(xy_np, eps=1e-6):
+    """去掉连续重复/极近点，避免弧长=0导致 searchsorted 出问题"""
+    if xy_np.shape[0] < 2:
+        return xy_np
+    dif = xy_np[1:] - xy_np[:-1]
+    seg = np.linalg.norm(dif, axis=1)
+    keep = np.ones((xy_np.shape[0],), dtype=bool)
+    keep[1:] = seg > eps
+    out = xy_np[keep]
+    return out
+
+
+def preprocess_start_and_scale(
+    xy_np,
+    start_to_zero=True,
+    scale_x=1.0,
+    scale_y=1.0,
+    keep_aspect=False
+):
+    """
+    start_to_zero: 起点平移到 (0,0)（和绳子初始对齐常用）
+    scale_x/scale_y: 最终轨迹在 x/y 方向的 peak-to-peak 跨度（单位 m）
+    keep_aspect: True => 保持形状比例，用统一缩放因子（取满足两者的较小者）
+    """
+    xy = xy_np.astype(np.float32).copy()
+
+    # 1) 起点对齐到 (0,0)
+    if start_to_zero:
+        xy -= xy[0:1]
+
+    # 2) 计算当前跨度
+    mins = xy.min(axis=0)
+    maxs = xy.max(axis=0)
+    span = np.maximum(maxs - mins, 1e-6)  # (2,)
+
+    # 3) 缩放（不再 center，避免破坏“起点=0”）
+    if keep_aspect:
+        sx = float(scale_x) / float(span[0])
+        sy = float(scale_y) / float(span[1])
+        s = min(sx, sy)
+        xy *= s
+    else:
+        xy[:, 0] *= float(scale_x) / float(span[0])
+        xy[:, 1] *= float(scale_y) / float(span[1])
+
+    return xy
+
+
+def uniform_resample_by_arclength(xy_np, M=800):
+    """
+    把手绘 polyline 按弧长均匀重采样成 M 个点（解决“有些段稀疏”）
+    返回: (M,2) float32
+    """
+    xy = _remove_near_duplicates(xy_np)
+    if xy.shape[0] < 2:
+        raise ValueError("Too few points after removing duplicates.")
+
+    # cumulative arclength
+    dif = xy[1:] - xy[:-1]
+    seg = np.linalg.norm(dif, axis=1).astype(np.float32)
+    s = np.concatenate([np.zeros(1, dtype=np.float32), np.cumsum(seg)], axis=0)  # (K,)
+    total = float(s[-1])
+    if total < 1e-8:
+        raise ValueError("Total length is ~0; drawing is degenerate.")
+
+    s01 = s / total  # normalize to [0,1]
+    u = np.linspace(0.0, 1.0, num=int(M), dtype=np.float32)
+
+    # piecewise linear interpolation
+    idx = np.searchsorted(s01, u, side="right") - 1
+    idx = np.clip(idx, 0, len(s01) - 2)
+
+    s0 = s01[idx]
+    s1 = s01[idx + 1]
+    w = (u - s0) / (s1 - s0 + 1e-8)
+
+    p0 = xy[idx]
+    p1 = xy[idx + 1]
+    out = p0 + (p1 - p0) * w[:, None]
+    return out.astype(np.float32)
+
+
+def sample_with_schedule_from_uniform(xy_uniform_np, points_t, device="cpu"):
+    """
+    xy_uniform_np: (M,2) 已经是“弧长均匀参数化”的轨迹
+    points_t: (T,) torch, in [0, t_end]（前密后疏）
+    逻辑：把 points_t 归一化到 [0,1]，当作弧长参数，从 uniform轨迹上取点
+    返回: (T,2) torch
+    """
+    device = torch.device(device)
+    xy = torch.tensor(xy_uniform_np, dtype=torch.float32, device=device)  # (M,2)
+    M = xy.shape[0]
+
+    t_end = float(points_t[-1].item())
+    u = (points_t / (t_end + 1e-8)).clamp(0.0, 1.0)  # (T,)
+
+    # u -> index in [0, M-1]
+    pos = u * (M - 1)
+    i0 = torch.floor(pos).long().clamp(0, M - 2)
+    i1 = i0 + 1
+    w = (pos - i0.float()).unsqueeze(1)  # (T,1)
+
+    p0 = xy[i0]
+    p1 = xy[i1]
+    out = p0 + (p1 - p0) * w
+    return out
+
+
+def smooth_gaussian(xy_np, sigma=2.0, radius=None):
+    """
+    xy_np: (M,2)
+    sigma: 越大越平滑
+    radius: 核半径，默认 3*sigma
+    """
+    if sigma is None or sigma <= 0:
+        return xy_np
+
+    if radius is None:
+        radius = int(max(1, round(3.0 * float(sigma))))
+    radius = int(radius)
+
+    t = np.arange(-radius, radius + 1, dtype=np.float32)
+    kernel = np.exp(-(t ** 2) / (2 * float(sigma) ** 2))
+    kernel /= (kernel.sum() + 1e-8)
+
+    out = np.zeros_like(xy_np, dtype=np.float32)
+    for d in range(2):
+        v = xy_np[:, d]
+        v_pad = np.pad(v, (radius, radius), mode="edge")
+        out[:, d] = np.convolve(v_pad, kernel, mode="valid")
+    return out
+
+
+
+def build_goal_traj_from_drawn(
+    drawn_path,
+    total_horizon,
+    device="cpu",
+    z0=0.2,
+
+    # --- scaling ---
+    scale_x=1.0,
+    scale_y=1.0,
+    keep_aspect=False,
+    sigma=2.0,
+
+    # --- uniform fix for sparse segments ---
+    uniform_M=800,
+
+    # --- schedule ---
+    ratio=0.3,
+    sharpness=2.0,
+    interval=(0.0, 2.0)
+):
+    """
+    输出:
+      Goal_traj: (total_horizon+1, 3) torch on device
+    """
+    xy_raw = np.load(drawn_path).astype(np.float32)  # (K,2)
+
+    # 1) 起点对齐到 (0,0) + 缩放到指定长宽
+    xy_scaled = preprocess_start_and_scale(
+        xy_raw,
+        start_to_zero=True,
+        scale_x=scale_x,
+        scale_y=scale_y,
+        keep_aspect=keep_aspect
+    )
+
+    # ✅ 新增：平滑一步（调这个 sigma）
+    xy_scaled = smooth_gaussian(xy_scaled, sigma=sigma)
+
+    # 2) 先均匀重采样（解决“有些点之间很稀疏”）
+    xy_uniform = uniform_resample_by_arclength(xy_scaled, M=uniform_M)  # (M,2)
+
+    # 3) 前密后疏 schedule（长度 total_horizon+1）
+    points = half_dense_then_uniform(
+        N=int(total_horizon) + 1,
+        ratio=ratio,
+        sharpness=sharpness,
+        mode="exp",
+        interval=interval,
+        plot=False
+    ).to(device)
+
+    # 4) 用 schedule 从“均匀轨迹”上取点 => (T,2)
+    xy_goal = sample_with_schedule_from_uniform(xy_uniform, points, device=device)
+
+    # 5) 加 z 维
+    z = torch.ones((xy_goal.shape[0], 1), device=xy_goal.device, dtype=xy_goal.dtype) * float(z0)
+    Goal_traj = torch.cat([xy_goal[:, 0:1], xy_goal[:, 1:2], z], dim=1)  # (T,3)
+
+    return Goal_traj
+
+
+def draw_traj_xy(
+    save_path="drawn_traj.npy",
+    xlim=(-0.5, 0.5),
+    ylim=(-0.5, 0.5),
+    figsize=(7, 7),
+    dpi=120
+):
+    """
+    鼠标左键按住拖动绘制一条连续轨迹（单位：米）
+    xlim / ylim: 画布物理范围（米），可非正方形
+    """
+    pts = []
+    drawing = {"on": False}
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    # ✅ 关键：画布范围由你指定（物理坐标）
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+
+    # 是否强制等比例（建议开，防止形状被拉伸）
+    ax.set_aspect("equal", adjustable="box")
+
+    ax.set_title(
+        f"Draw trajectory in XY (meters)\n"
+        f"x∈[{xlim[0]}, {xlim[1]}], y∈[{ylim[0]}, {ylim[1]}]\n"
+        f"LMB drag=draw | Enter=save | Backspace=clear | Esc=quit"
+    )
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.grid(True)
+
+    line, = ax.plot([], [], "-", lw=2)
+
+    def redraw():
+        if len(pts) < 2:
+            line.set_data([], [])
+        else:
+            arr = np.asarray(pts, dtype=np.float32)
+            line.set_data(arr[:, 0], arr[:, 1])
+        fig.canvas.draw_idle()
+
+    def on_press(event):
+        if event.inaxes != ax or event.button != 1:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+        drawing["on"] = True
+        pts.append([event.xdata, event.ydata])
+        redraw()
+
+    def on_move(event):
+        if not drawing["on"] or event.inaxes != ax:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+        pts.append([event.xdata, event.ydata])
+        redraw()
+
+    def on_release(event):
+        if event.button == 1:
+            drawing["on"] = False
+
+    def on_key(event):
+        if event.key == "enter":
+            if len(pts) < 2:
+                print("[draw] Too few points, not saved.")
+                plt.close(fig)
+                return
+            arr = np.asarray(pts, dtype=np.float32)
+            np.save(save_path, arr)
+            print(f"[draw] Saved: {save_path}, shape={arr.shape}")
+            plt.close(fig)
+
+        elif event.key == "backspace":
+            pts.clear()
+            redraw()
+
+        elif event.key == "escape":
+            print("[draw] Quit without saving.")
+            plt.close(fig)
+
+    fig.canvas.mpl_connect("button_press_event", on_press)
+    fig.canvas.mpl_connect("motion_notify_event", on_move)
+    fig.canvas.mpl_connect("button_release_event", on_release)
+    fig.canvas.mpl_connect("key_press_event", on_key)
+
+    plt.show()
+    return save_path
+
+
 def sin_traj(points, width=0.45, plot=False, device=None):
     """
     鸡蛋底端作为起点，且从起点开始点密集→后面稀疏。
@@ -709,6 +1155,176 @@ def sin_traj(points, width=0.45, plot=False, device=None):
         plt.show()
 
     return traj
+
+
+def plot_tip_vs_goal_and_error(
+    pos_history, goal_traj, dt, record_interval, tip_idx=-1
+):
+    """
+    pos_history: Tensor (T,P,3) or (1,T,P,3)
+    goal_traj:   Tensor (T,3)
+    dt:          physics dt
+    record_interval: steps per recorded frame
+    tip_idx:     index of tip particle (default -1)
+    """
+
+    # ---------- normalize shapes ----------
+    if isinstance(pos_history, torch.Tensor):
+        ph = pos_history.detach()
+    else:
+        ph = torch.as_tensor(pos_history)
+
+    if ph.dim() == 4:        # (B,T,P,3)
+        ph = ph[0]
+    assert ph.dim() == 3, f"pos_history should be (T,P,3), got {ph.shape}"
+
+    if isinstance(goal_traj, torch.Tensor):
+        gt = goal_traj.detach()
+    else:
+        gt = torch.as_tensor(goal_traj)
+
+    if gt.dim() == 3:        # (1,T,3)
+        gt = gt[0]
+    assert gt.dim() == 2, f"goal_traj should be (T,3), got {gt.shape}"
+
+    # ---------- align length ----------
+    T = min(ph.shape[0], gt.shape[0])
+    ph = ph[:T]
+    gt = gt[:T]
+
+    # ---------- tip & error ----------
+    tip = ph[:, tip_idx, :]                 # (T,3)
+    err = tip - gt                          # (T,3)
+    err_norm = torch.linalg.norm(err, dim=1)
+
+    # ---------- time axis ----------
+    t = torch.arange(T, device=tip.device) * (dt * record_interval)
+
+    tip_np = tip.cpu().numpy()
+    gt_np = gt.cpu().numpy()
+    errn_np = err_norm.cpu().numpy()
+    t_np = t.cpu().numpy()
+
+    # ================= plotting =================
+    fig = plt.figure(figsize=(12, 5))
+
+    # -------- subplot 1: 3D trajectory --------
+    ax0 = fig.add_subplot(1, 2, 1, projection='3d')
+
+    ax0.plot(gt_np[:, 0], gt_np[:, 1], gt_np[:, 2],
+             '--', lw=2, label='Goal')
+    ax0.plot(tip_np[:, 0], tip_np[:, 1], tip_np[:, 2],
+             '-', lw=2, label='Tip')
+
+    ax0.scatter(gt_np[0, 0], gt_np[0, 1], gt_np[0, 2],
+                s=40, label='Goal start')
+    ax0.scatter(tip_np[0, 0], tip_np[0, 1], tip_np[0, 2],
+                s=40, label='Tip start')
+
+    ax0.set_xlabel("x")
+    ax0.set_ylabel("y")
+    ax0.set_zlabel("z")
+    ax0.set_title("Tip trajectory vs Goal")
+    ax0.legend()
+    ax0.grid(True)
+
+    # ---- enforce equal XYZ scale ----
+    all_pts = np.concatenate([tip_np, gt_np], axis=0)
+    xmin, ymin, zmin = all_pts.min(axis=0)
+    xmax, ymax, zmax = all_pts.max(axis=0)
+
+    cx = 0.5 * (xmin + xmax)
+    cy = 0.5 * (ymin + ymax)
+    cz = 0.5 * (zmin + zmax)
+
+    half = 0.5 * max(xmax - xmin, ymax - ymin, zmax - zmin)
+    half = max(half, 1e-6)  # 防止退化
+
+    ax0.set_xlim(cx - half, cx + half)
+    ax0.set_ylim(cy - half, cy + half)
+    ax0.set_zlim(cz - half, cz + half)
+
+    # -------- subplot 2: ||error|| --------
+    ax1 = fig.add_subplot(1, 2, 2)
+    ax1.plot(t_np, errn_np, lw=2)
+    ax1.set_xlabel("time (s)")
+    ax1.set_ylabel("||error||")
+    ax1.set_title("Tracking error norm over time")
+    ax1.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_goal_traj(goal_traj, T_task, title="Goal Trajectory",
+                   color='gray', scatter=True, equal_xy=True):
+    """
+    goal_traj: (frames,3)
+    T_task: total time (s)
+    equal_xy: if True, keep equal scale in XY plane
+    """
+    if isinstance(goal_traj, torch.Tensor):
+        goal_np = goal_traj.detach().cpu().numpy()
+    else:
+        goal_np = np.asarray(goal_traj)
+
+    # --- length ---
+    diffs = goal_np[1:] - goal_np[:-1]                 # (F-1,3)
+    seg_lengths = np.linalg.norm(diffs, axis=1)         # (F-1,)
+    total_length = float(seg_lengths.sum())
+
+    # --- max speed ---
+    # assume uniform sampling over T_task across (frames-1) segments
+    if goal_np.shape[0] >= 2:
+        dt = float(T_task) / float(goal_np.shape[0] - 1)
+        speeds = seg_lengths / dt                       # (F-1,)
+        max_speed = float(speeds.max())
+    else:
+        dt = 0.0
+        max_speed = 0.0
+
+    title2 = (f"{title} (Length: {total_length:.3f} m, "
+              f"Est. Time: {T_task:.1f} s, Max speed: {max_speed:.3f} m/s)")
+
+    fig = plt.figure(figsize=(7, 6))
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot(goal_np[:, 0], goal_np[:, 1], goal_np[:, 2],
+            lw=2, color=color, label='Goal Trajectory')
+    if scatter:
+        ax.scatter(goal_np[:, 0], goal_np[:, 1], goal_np[:, 2],
+                   color=color, s=10)
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title(title2)
+    ax.grid(True)
+    ax.legend()
+    plt.tight_layout()
+
+    # ---- make XY plane equal scale ----
+    if equal_xy:
+        # set equal aspect for x and y by matching ranges
+        x_min, x_max = goal_np[:, 0].min(), goal_np[:, 0].max()
+        y_min, y_max = goal_np[:, 1].min(), goal_np[:, 1].max()
+        z_min, z_max = 0.0, 1.0
+
+        x_mid = 0.5 * (x_min + x_max)
+        y_mid = 0.5 * (y_min + y_max)
+
+        half = 0.5 * max((x_max - x_min), (y_max - y_min)) * 1.2  # 1.2 for margin
+        # avoid degenerate
+        half = max(half, 1e-6)
+
+        ax.set_xlim(x_mid - half, x_mid + half)
+        ax.set_ylim(y_mid - half, y_mid + half)
+
+        # z 不强制等比例，只给个合理范围（你也可以按需固定）
+        ax.set_zlim(z_min, z_max)
+
+    plt.show()
+
 
 
 def eight_traj(points, scale_x=0.25, scale_y=0.45,
@@ -980,6 +1596,7 @@ def half_dense_then_uniform(N=100, ratio=0.5, sharpness=2.0, mode='exp', interva
 
     return x
 
+
 def rolling_window(position_data, steps=1, size=1, start=1):
     """
         steps       # 窗口长度
@@ -1154,7 +1771,6 @@ def get_goal_traj(total_time=2.5, curve_type='sin', ctr_period=10, device=torch.
         Goal_traj = eight_traj(points, scale_x=0.45 * 1.0, scale_y=0.65 * 1.0, z0=0.2, loops=1, plot=False, device=device)
 
     return Goal_traj
-
 
 
 if __name__ == "__main__":

@@ -386,6 +386,7 @@ if __name__ == "__main__":
     position_data, velocity_data, control_sequence = mj_data_to_my_data(N, sampled_data, device)
 
     ctr_period = 1
+    record_interval = 25
     sim = WarpRope(
         batch_size=1280,
         L=1.0,
@@ -396,20 +397,19 @@ if __name__ == "__main__":
         bending_damping=0.000401,
         air_drag=0.2206 / 1000,
         g=10.07,
-        max_record_steps=10000,
-        record_interval=10,
+        max_record_steps=750,
+        record_interval=record_interval,
         ctr_period=ctr_period,
         mode='vel',
         dt=0.001
     )
 
-    sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:10000//ctr_period])
-    traj_warp = sim.simulate(steps=10000)
+    sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:750//ctr_period])
+    traj_warp = sim.simulate(steps=750)
     print("Trajectory shape:", traj_warp.shape)
 
     dt = 0.001
     L = 1.0
-    record_interval = 10
     # plot_animation_3d(traj_warp, dt, record_interval, L, repeat=True, batch_idx=0)
 
     model_compare = 0
@@ -428,7 +428,6 @@ if __name__ == "__main__":
         dt = 0.001  # Time step (s)
         T = 10.0  # Simulation duration (s)
         total_steps = int(T / dt)
-        record_interval = 10
 
         # === Create model instance ===
         model = Rope(N=N, L=L, mass=mass, k=k, k_bend=k_bend, damping=damping, damping_bend=damping_bend, twisting=twisting,
@@ -463,11 +462,11 @@ if __name__ == "__main__":
         wp.synchronize()
 
         # benchmark
-        n = 10
-        steps = 10000
+        n = 100
+        steps = 750
         t0 = time.perf_counter()
         for _ in range(n):
-            sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:10000 // ctr_period])
+            sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:750 // ctr_period])
             traj_warp = sim.simulate(steps=steps)
         wp.synchronize()
         t1 = time.perf_counter()
