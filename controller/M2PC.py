@@ -5,75 +5,73 @@ import time
 from common.utils import *
 from common.rope_warp_4 import WarpRope, N, P
 
-
-class Policy:
-    def __init__(self, action_dim, horizon, dt, limits=None, device='cpu'):
-        self.action_dim = int(action_dim)
-        self.horizon = int(horizon)
-        self.dt = float(dt)
-        self.steps = int(horizon / dt)  # 保持兼容（实际不用）
-        self.device = device
-        self.parameters = torch.zeros((self.horizon, self.action_dim), device=self.device, dtype=torch.float32)
-        self.limits = limits.to(device) if limits is not None else None
-
-    def action(self):
-        return self.clamp(self.parameters[0])
-
-    def clamp(self, actions):
-        if self.limits is None:
-            return actions
-        low, high = self.limits
-        return torch.clamp(actions, low, high)
-
-    def update_policy(self):
-        # in-place receding-horizon shift
-        self.parameters[:-1, :].copy_(self.parameters[1:, :].clone())
-        self.parameters[-1:, :].copy_(self.parameters[-2:-1, :])
+# ============================================================
+# Multi-Modal Planner
+# ============================================================
 
 
 class Planner:
     """
-    结构照 sampling_mpc.py，但更高效：
-      - 预分配 noise/candidate，避免 torch.cat
-      - 全程只用固定 horizon（无 len_）
-      - 如果 goal 不足 horizon：重复最后一个 goal 点 padding 到 horizon
-      - WarpRope 只创建一次：batch=n_sample+1、frames=horizon
+    多模态采样 MPC（pairwise-diversity + Greedy）
+    - n_sample: 总采样数
+    - m_modes: 模态数 m，要求 n_sample % m == 0
+    - good pool: top_k_good（只用这个）
+    - 可行性：假设都可行（不筛 feasible）
+    - 特征：只用末端轨迹（不标准化）
+    - 更新：所有模态都 receding-horizon shift（满足你“次模态也更新”的要求）
     """
+
     def __init__(self, rope: WarpRope, cost_fn, dt, ctr_period, horizon, n_sample, n_improve,
-                 noise_scale, action_dim, limits=None, device='cpu', mode='acc'):
+                 noise_scale, action_dim, limits=None, device='cpu', mode='acc',
+                 m_modes=1, top_k_good=200, beta=5.0, wJ=1.0, standard_m2pc=True):
+
         self.rope = rope
         self.cost_fn = cost_fn
         self.dt = float(dt)
         self.ctr_period = int(ctr_period)
         self.horizon = int(horizon)
+
         self.n_sample = int(n_sample)
         self.n_improve = int(n_improve)
         self.noise_scale = float(noise_scale)
         self.action_dim = int(action_dim)
         self.limits = limits
-        self.policy = Policy(action_dim, horizon, dt, limits, device=device)
         self.mode = mode
+        self.standard_m2pc = standard_m2pc
         self.device = device
 
-        self.batch = self.n_sample + 1  # baseline + noise samples
+        # 多模态
+        self.m = int(m_modes)
+        assert self.n_sample % self.m == 0, "n_sample % m_modes must == 0"
+        self.Nk = self.n_sample // self.m
 
-        # prealloc buffers (GPU)
+        # good pool & diversity
+        self.top_k_good = int(top_k_good)
+        self.beta = float(beta)
+        self.wJ = float(wJ)
+
+        # batch = m 个 seeds + n_sample 个扰动样本
+        self.batch = self.m + self.n_sample
+
+        # 多模态 seeds: (m, H, 3)
+        self.seeds = torch.zeros((self.m, self.horizon, self.action_dim),
+                                 device=self.device, dtype=torch.float32)
+        self.J_star = torch.zeros(self.m, device=self.device, dtype=torch.float32)
+
+        # buffers
         self._noise = torch.empty((self.n_sample, self.horizon, self.action_dim),
                                   device=self.device, dtype=torch.float32)
         self._cand = torch.empty((self.batch, self.horizon, self.action_dim),
                                  device=self.device, dtype=torch.float32)
 
-        # ---- for visualization cache ----
-        self.last_tip_traj = None  # (B, H, 3)
-        self.last_cost = None  # (B,)
-        self.best_traj = None
+        # cache for visualization
+        self.last_tip_traj = None  # (B,H,3)
+        self.last_cost = None      # (B,)
+        self.traj_seeds = None # (m,H,3)
 
+    # ------------------------------------------------------------
     @torch.no_grad()
     def _pad_goal_to_horizon(self, goal: torch.Tensor) -> torch.Tensor:
-        """
-        goal: (T,3), T can be <= horizon
-        return: (horizon,3) by repeating the last point if needed
-        """
         goal = goal.to(self.device, dtype=torch.float32).contiguous()
         T = goal.shape[0]
         if T == self.horizon:
@@ -83,120 +81,203 @@ class Planner:
         last = goal[-1:, :].expand(self.horizon - T, -1)
         return torch.cat([goal, last], dim=0)
 
+    # ------------------------------------------------------------
     @torch.no_grad()
     def _build_candidates_full_horizon(self):
         """
-        输出 (batch, horizon, action_dim)
-        cand[0] = baseline policy
-        cand[1:] = policy + noise
+        cand:
+          [0:m]        = seeds
+          [m: m+Ns]    = seeds[k] + noise (each mode has Nk samples)
         """
-        # baseline
-        self._cand[0].copy_(self.policy.parameters)
+        # seeds
+        self._cand[:self.m].copy_(self.seeds)
 
-        # noise full horizon
+        # noise
         self._noise.normal_(0.0, self.noise_scale)
 
-        # noisy samples
-        self._cand[1:].copy_(self.policy.parameters.unsqueeze(0))
-        self._cand[1:].add_(self._noise)
+        # noisy samples per mode
+        for k in range(self.m):
+            s = k * self.Nk
+            e = (k + 1) * self.Nk
+            self._cand[self.m + s:self.m + e].copy_(self.seeds[k].unsqueeze(0))
+            self._cand[self.m + s:self.m + e].add_(self._noise[s:e])
 
-        # clamp in-place
-        if self.policy.limits is not None:
-            low, high = self.policy.limits
+        # clamp
+        if self.limits is not None:
+            low, high = self.limits
             self._cand.clamp_(float(low.item()), float(high.item()))
 
         return self._cand
 
+    # ------------------------------------------------------------
     @torch.no_grad()
     def rollout(self, pos, vel, batch_ctr_parameter_full):
         """
         pos, vel: (1,P,3)
-        batch_ctr_parameter_full: (batch, horizon, 3)
-        return: (batch, horizon, 3) end-effector positions
+        batch_ctr_parameter_full: (B,H,3)
+        return: (B,H,3) end-effector positions
         """
         self.rope.set_state_and_action(pos, vel, batch_ctr_parameter_full)
-        traj = self.rope.simulate(steps=self.horizon * self.ctr_period)  # (B, horizon, P, 3)
-        return traj[:, :, -1, :]  # 只取末端 (B,horizon,3)
+        traj = self.rope.simulate(steps=self.horizon * self.ctr_period)  # (B,H,P,3)
+        return traj[:, :, -1, :]  # (B,H,3) 只取末端
 
+    # ------------------------------------------------------------
+    @torch.no_grad()
+    def _greedy_select(self, cost_g, tip_traj_g):
+        """
+        cost_g: (K,)
+        tip_traj_g: (K,H,3)
+        return selected indices in [0..K-1], size=m
+        """
+
+        feat = tip_traj_g.reshape(tip_traj_g.shape[0], -1)
+        dist2 = torch.cdist(feat, feat, p=2) ** 2           # (K,K)
+
+        # init with minimum cost
+        first = int(0)  # first = int(torch.argmin(cost_g).item())
+        selected = [first]
+
+        div_sum = dist2[:, first].clone()
+
+        while len(selected) < self.m:
+            score = -self.wJ * cost_g + self.beta * div_sum
+            score[selected] = -1e18
+
+            nxt = int(torch.argmax(score).item())
+            selected.append(nxt)
+            div_sum += dist2[:, nxt]
+
+        return torch.tensor(selected, device=self.device, dtype=torch.long)
+
+    # ------------------------------------------------------------
+    @torch.no_grad()
     def improve_policy(self, pos, vel, goal):
-        # ✅ 无 len_：goal 不足就 padding
-        goal = self._pad_goal_to_horizon(goal)  # (horizon,3)
+        goal = self._pad_goal_to_horizon(goal)  # (H,3)
 
         for _ in range(self.n_improve):
-            batch_ctr_parameter = self._build_candidates_full_horizon()
-            with torch.no_grad():
+            batch_ctr_parameter = self._build_candidates_full_horizon()  # (B,H,3)
+            batch_traj = self.rollout(pos, vel, batch_ctr_parameter)     # (B,H,3)
+            cost = self.cost_fn(batch_traj, goal)                        # (B,)
 
-                # t0 = time.perf_counter()
-                batch_traj = self.rollout(pos, vel, batch_ctr_parameter)  # (B,horizon,3)
-                # t1 = time.perf_counter()
-                # print("time for rollout:", t1 - t0)
-
-            cost = self.cost_fn(batch_traj, goal)  # (B,)
-
-            if False:
+            if self.m == 1:
                 idx = int(cost.argmin().item())
-                self.policy.parameters.copy_(batch_ctr_parameter[idx])
+                if self.standard_m2pc:
+                    self.seeds.copy_(batch_ctr_parameter[idx])
+                else:
+                    # ===== MPPI 风格：对“整个 action 序列”做 softmin 加权平均 =====
+                    lam = 0.3 * (cost.std() + 1e-6)
+
+                    J = cost
+                    J_min = J.min()
+                    # w_k ∝ exp(-(J_k - J_min)/λ)
+                    w = torch.exp(-(J - J_min) / lam)  # (B,)
+                    w = w / (w.sum() + 1e-8)  # 归一化
+
+                    # 直接对控制序列加权平均: (H, action_dim)
+                    new_params = (w.view(-1, 1, 1) * batch_ctr_parameter).sum(dim=0)
+
+                    self.seeds.copy_(new_params)
             else:
-                # ===== MPPI 风格：对“整个 action 序列”做 softmin 加权平均 =====
-                lam = 0.3 * (cost.std() + 1e-6)
+                # 选择最佳的 self.top_k_good 个候选人进池子
+                sort_idx = torch.argsort(cost)
+                good_idx = sort_idx[:self.top_k_good]
+                # good_idx = torch.topk(cost, self.top_k_good, largest=False).indices  # 听说这个可能不保证排序结果
 
-                J = cost
-                J_min = J.min()
-                # w_k ∝ exp(-(J_k - J_min)/λ)
-                w = torch.exp(-(J - J_min) / lam)  # (B,)
-                w = w / (w.sum() + 1e-8)  # 归一化
+                traj_g = batch_traj[good_idx]              # (K,H,3)
+                cost_g = cost[good_idx]                    # (K,)
+                ctr_g = batch_ctr_parameter[good_idx]      # (K,H,3)
 
-                # 直接对控制序列加权平均: (H, action_dim)
-                new_params = (w.view(-1, 1, 1) * batch_ctr_parameter).sum(dim=0)
+                # greedy select m modes
+                sel = self._greedy_select(cost_g, traj_g)  # (m,)
+                U_star = ctr_g[sel]                        # (m,H,3)
 
-                self.policy.parameters.copy_(new_params)
+                # update seeds
+                self.seeds.copy_(U_star)
 
-        # ✅ cache for visualization (save the LAST improve iteration)
+        # cache for visualization: show the last sampling batch
         self.last_tip_traj = batch_traj.detach()
         self.last_cost = cost.detach()
+        if self.m == 1:
+            self.traj_seeds = batch_traj[idx:idx+1]
+        else:
+            self.traj_seeds = traj_g[sel]
+            J_star = cost_g[sel]  # (m,)
+            self.J_star.copy_(J_star)
 
+    # ------------------------------------------------------------
     @torch.no_grad()
-    def get_cand(self, top_k=100, best_k=1):
+    def update_policy(self):
         """
+        你要求：次模态也更新（跟主模态一样）
+        => 所有 seeds 都做 receding-horizon shift
+        """
+        self.seeds[:, :-1, :].copy_(self.seeds[:, 1:, :].clone())
+        self.seeds[:, -1:, :].copy_(self.seeds[:, -2:-1, :])
+
+    # ------------------------------------------------------------
+    def get_action(self, rule='greedy'):
+        # 执行本轮选中的“best mode”的一个动作
+
+        if self.m == 1:
+            return self.seeds[0, 0]
+
+        if rule == 'greedy':
+            # 选 cost 最小的模态
+            best = int(torch.argmin(self.J_star).item())
+
+        elif rule == 'sample':
+            # Boltzmann sampling: p ∝ exp(-J / temp)
+            j = self.J_star - self.J_star.min()  # 提高数值稳定性
+            temp = 1.0 * self.J_star.std() + 1e-6  # temp过小-->greedy / temp过大-->random
+            p = torch.softmax(-j / temp, dim=0)
+            best = int(torch.multinomial(p, 1).item())
+
+        elif rule == 'random':
+            # 均匀随机选一个模态
+            best = int(torch.randint(self.m, (1,), device=self.device).item())
+
+        else:
+            raise ValueError(f"Unknown rule: {rule}")
+
+        return self.seeds[best, 0]
+
+    # ------------------------------------------------------------
+    @torch.no_grad()
+    def get_cand(self, k_cand=100, rule='random'):
+        """
+        返回候选轨迹用于可视化
+
         Returns:
-          top_tip_traj: (K,H,3)  K=min(top_k,B)
-          top_cost:     (K,)
-          best_k_traj: (best_k,) indices in the ORIGINAL batch (B,)
+            k_tip_traj: (K,H,3)
+            k_cost:     (K,)
+            traj_seeds: (m,H,3) or (1,H,3)
         """
         if self.last_tip_traj is None or self.last_cost is None:
             return None, None, None
 
         B = self.last_cost.shape[0]
-        K = min(int(top_k), int(B))
-        best_k = min(int(best_k), int(B))
+        K = min(int(k_cand), B)
 
-        # sort by cost ascending
-        sort_idx = torch.argsort(self.last_cost)
-        top_idx = sort_idx[:K]
+        if rule == 'random':
+            k_idx = torch.randperm(B, device=self.last_cost.device)[:K]
+        elif rule == 'best':
+            k_idx = torch.topk(self.last_cost, K, largest=False).indices
+        else:
+            raise ValueError(f"Unknown rule: {rule}")
 
-        top_idx = torch.randperm(B, device=self.last_cost.device)[:K]
-        top_tip_traj = self.last_tip_traj[top_idx]  # (K,H,3)
-        top_cost = self.last_cost[top_idx]  # (K,)
+        k_tip_traj = self.last_tip_traj[k_idx]
+        k_cost = self.last_cost[k_idx]
 
-        # best_k trajectories (for future multi-modal you can pass best_k>1)
-        best_indices = sort_idx[:best_k]  # (best_k,)
-        best_k_traj = self.last_tip_traj[best_indices]
-        best_k_traj = self.last_tip_traj[0:1]
-
-        return top_tip_traj, top_cost, best_k_traj
-
-    def get_action(self):
-        return self.policy.action()
+        return k_tip_traj, k_cost, self.traj_seeds
 
 
 def cost_fn(batch_traj, goal_h):
-    # batch_traj: (B,horizon,3), goal_h: (horizon,3)
     err = batch_traj - goal_h.unsqueeze(0)
     return torch.sum(torch.abs(err), dim=(1, 2))
 
 
 if __name__ == "__main__":
-    # === Parameters（保持 sampling_mpc.py 风格）===
+    # === Parameters（保持 Sampling_MPC.py 风格）===
     L = 1.0
     mass = 0.0025 * 40 / N
     k = 10000 * 0.46
@@ -206,25 +287,37 @@ if __name__ == "__main__":
     air_drag = 0.2206 / 1000
     g = 10.07
     dt = 0.001
-    T_task = 2.5 * 5.0
+    T_task = 2.5 * 4.0
     total_steps = int(T_task / dt)
     mode = 'acc'  # 或 'vel'
 
     ctr_period = 25
     horizon = 30  # 20 doesn't work; 25 can work
-    n_sample = 400
-    n_improve = 10
-    noise_scale = 1.50  # 0.25 looks good for naive case
+
+    # ===== 多模态参数 =====
+    n_sample = 400     # 总采样数
+    m_modes = 1        # 模态数（单模态=1）
+    assert n_sample % m_modes == 0
+
+    n_improve = 5
+    noise_scale = 1.8  # 0.25 looks good for naive case, 1.5更好for naive case？
     action_dim = 3
     limits = torch.tensor([-15.0, 15.0])
-    total_horizon = int(total_steps / ctr_period)  # 当total_steps不能整除时，会把多余的截断
+    total_horizon = int(total_steps / ctr_period)
+
+    # diversity 超参
+    top_k_good = 200
+    beta = 5.0
+    wJ = 0.0
+
+    visualization = False
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # === warp_4 rope：rollout（batch = n_sample+1）===
+    # === warp_4 rope：rollout（batch = m_modes + n_sample）===
     rope = WarpRope(
-        batch_size=n_sample + 1,
+        batch_size=m_modes + n_sample,
         L=L,
         mass=mass,
         k=k,
@@ -235,7 +328,7 @@ if __name__ == "__main__":
         g=g,
         dt=dt,
         max_record_steps=horizon * ctr_period,
-        record_interval=ctr_period,   # 每个控制 tick 记录一次 => frames=horizon
+        record_interval=ctr_period,
         ctr_period=ctr_period,
         mode=mode
     )
@@ -253,7 +346,7 @@ if __name__ == "__main__":
         g=g,
         dt=dt,
         max_record_steps=ctr_period,
-        record_interval=ctr_period,   # frames=1
+        record_interval=ctr_period,
         ctr_period=ctr_period,
         mode=mode
     )
@@ -291,10 +384,12 @@ if __name__ == "__main__":
     planner = Planner(
         rope, cost_fn, dt, ctr_period, horizon,
         n_sample, n_improve, noise_scale, action_dim,
-        limits=limits, device=device, mode=mode
+        limits=limits, device=device, mode=mode,
+        m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ
     )
 
-    viz = LiveMPCVisualizer(goal_traj=Goal_traj, margin=0.05)
+    if visualization:
+        viz = LiveMPCVisualizer(goal_traj=Goal_traj, margin=0.05)
 
     # === Init state（保留原逻辑）===
     pos = torch.zeros((1, P, 3), device=device)
@@ -304,17 +399,24 @@ if __name__ == "__main__":
     action_history = []
     pos_history = []
     vel_history = []
+    time_record = []
     pos_history.append(pos.clone())
 
     stored_actions = None
     # stored_actions = np.load('action_history.npy')
 
-    # === warm start（保留原逻辑；goal 不足会自动 padding）===
+    # === warm start（保留原逻辑；但要初始化多模态 seeds）===
     if stored_actions is None:
         vel_start = (Goal_traj[1:1 + horizon, :] - Goal_traj[:horizon, :]) / (T_task / horizon)
-        planner.policy.parameters.copy_(vel_start.to(device))
+        vel_start = vel_start.to(device)
+
+        # 初始化所有模态 seeds = vel_start (+小扰动让模态更容易分开)
+        planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
+        if m_modes > 1:
+            planner.seeds[1:] += 0.05 * torch.randn_like(planner.seeds[1:])
 
         goal = Goal_traj[1:1 + horizon, :]
+
         planner.n_improve = n_improve * 100
         planner.improve_policy(pos, vel, goal)
         planner.n_improve = n_improve
@@ -322,7 +424,7 @@ if __name__ == "__main__":
     # === MPC loop（保留原逻辑）===
     import warp as wp
     for i in range(total_horizon):
-        if i % 10 == 0:
+        if i % 100 == 0:
             print('i: ', i)
 
         if stored_actions is None:
@@ -335,44 +437,49 @@ if __name__ == "__main__":
             planner.improve_policy(pos, vel, goal)
             action = planner.get_action()
             t1 = time.perf_counter()
-            print("Time spent:", t1 - t0, "Desired time:", dt * ctr_period)
+            time_record.append(t1 - t0)
+            # print("Time spent:", t1 - t0, "Desired time:", dt * ctr_period)
 
         else:
             action = torch.from_numpy(stored_actions[i]).to(device)
 
-        # visulization
-        if i % 1 == 0:  # 每2步刷新一次
-            topK = 100
-            bestK = 1  # 以后多模态你改成 3/5 都行
-            cand_tip_traj, cand_cost, best_k_traj = planner.get_cand(top_k=topK, best_k=bestK)
+        # visualization
+        if visualization:
+            if i % 2 == 0:
+                k_cand = 100
+                cand_tip_traj, cand_cost, m_mode_trajs = planner.get_cand(k_cand=k_cand)
 
-            if cand_tip_traj is not None:
-                rope_now = pos[0]  # (P,3) 这里假设 pos shape 是 (1,P,3)
-                viz.update(
-                    rope_pos=rope_now,
-                    cur_i=i,
-                    cand_tip_traj=cand_tip_traj,
-                    cand_cost=cand_cost,
-                    best_k_traj=best_k_traj,
-                    title=f"MPC step {i} | top{topK} candidates"
-                )
+                if cand_tip_traj is not None:
+                    rope_now = pos[0]  # (P,3)
+                    viz.update(
+                        rope_pos=rope_now,
+                        cur_i=i,
+                        cand_tip_traj=cand_tip_traj,
+                        cand_cost=cand_cost,
+                        m_mode_trajs=m_mode_trajs,
+                        title=f"MPC step {i} | {k_cand} candidates | modes={m_modes}"
+                    )
 
         # ---- 执行 chosen action（batch=1 rope_exec）----
-        action_seq = action.view(1, 1, 3)  # (B=1,T=1,3)
+        action_seq = action.view(1, 1, 3)  # (1,1,3)
         rope_exec.set_state_and_action(pos, vel, action_seq)
         _ = rope_exec.simulate(steps=ctr_period)
 
-        # 更新状态（从 warp 内部 pos/vel 拿出来）
+        # 更新状态
         pos = wp.to_torch(rope_exec.pos)
         vel = wp.to_torch(rope_exec.vel)
 
-        planner.policy.update_policy()
+        # Update policy
+        planner.update_policy()
 
         pos_history.append(pos.clone())
         action_history.append(action.detach().cpu().numpy())
         vel_history.append(vel.clone().detach().cpu().numpy()[0, 0])
 
-    viz.close()
+    if visualization:
+        viz.close()
+
+    print("time: ", torch.tensor(time_record).mean())
 
     # === 动画/轨迹（保留）===
     pos_history = torch.cat(pos_history, dim=0)
@@ -381,12 +488,12 @@ if __name__ == "__main__":
 
     # === action 曲线（保留）===
     action_history_np = np.array(action_history)
-    time = np.arange(action_history_np.shape[0]) * ctr_period * dt
+    time_axis = np.arange(action_history_np.shape[0]) * ctr_period * dt
 
     plt.figure(figsize=(10, 6))
-    plt.plot(time, action_history_np[:, 0], label='Action X', color='r')
-    plt.plot(time, action_history_np[:, 1], label='Action Y', color='g')
-    plt.plot(time, action_history_np[:, 2], label='Action Z', color='b')
+    plt.plot(time_axis, action_history_np[:, 0], label='Action X', color='r')
+    plt.plot(time_axis, action_history_np[:, 1], label='Action Y', color='g')
+    plt.plot(time_axis, action_history_np[:, 2], label='Action Z', color='b')
     plt.xlabel('Time (s)')
     plt.ylabel('Action Value')
     plt.title('Action XYZ over Time')
@@ -398,9 +505,9 @@ if __name__ == "__main__":
     # === velocity 曲线（保留）===
     vel_history_np = np.array(vel_history)
     plt.figure(figsize=(10, 6))
-    plt.plot(time, vel_history_np[:, 0], label='Velocity X', color='r', linestyle='--')
-    plt.plot(time, vel_history_np[:, 1], label='Velocity Y', color='g', linestyle='--')
-    plt.plot(time, vel_history_np[:, 2], label='Velocity Z', color='b', linestyle='--')
+    plt.plot(time_axis, vel_history_np[:, 0], label='Velocity X', color='r', linestyle='--')
+    plt.plot(time_axis, vel_history_np[:, 1], label='Velocity Y', color='g', linestyle='--')
+    plt.plot(time_axis, vel_history_np[:, 2], label='Velocity Z', color='b', linestyle='--')
     plt.xlabel('Time (s)')
     plt.ylabel('Velocity Value')
     plt.title('Velocity XYZ over Time')
@@ -409,15 +516,15 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.show()
 
-    # 绘制 pos_history 顶端点轨迹
-    tip_pos_history = pos_history[1:, 0, :]  # 假设最后一个点是顶端点，形状: (steps, 3)
+    # pos 轨迹
+    tip_pos_history = pos_history[1:, 0, :]
     plt.figure(figsize=(10, 6))
-    plt.plot(time, tip_pos_history[:, 0].cpu().numpy(), label='Tip X', color='m')
-    plt.plot(time, tip_pos_history[:, 1].cpu().numpy(), label='Tip Y', color='c')
-    plt.plot(time, tip_pos_history[:, 2].cpu().numpy(), label='Tip Z', color='y')
+    plt.plot(time_axis, tip_pos_history[:, 0].cpu().numpy(), label='Tip X', color='m')
+    plt.plot(time_axis, tip_pos_history[:, 1].cpu().numpy(), label='Tip Y', color='c')
+    plt.plot(time_axis, tip_pos_history[:, 2].cpu().numpy(), label='Tip Z', color='y')
     plt.xlabel('Time (s)')
-    plt.ylabel('Tip Position')
-    plt.title('Tip (End Point) Position XYZ over Time')
+    plt.ylabel('top Position')
+    plt.title('Top Point Position XYZ over Time')
     plt.legend()
     plt.grid(True)
     plt.tight_layout()

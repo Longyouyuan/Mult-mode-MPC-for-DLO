@@ -54,20 +54,8 @@ class PositionCommandFilter:
         self.vel = initial_vel
         self.dt = dt
 
-    def input_acceleration2(self, acc_cmd, max_vel=1.5):
-        self.vel += acc_cmd * self.dt
-        self.pos += self.vel * self.dt
-        return self.pos  # 平滑后的目标位置
-
     def input_acceleration(self, acc_cmd, max_vel=1.5):
-        if acc_cmd[0] * self.vel[0] < 0:
-            self.vel[0] /= 1.002
-        if acc_cmd[1] * self.vel[1] < 0:
-            self.vel[1] /= 1.002
-
         self.vel += acc_cmd * self.dt
-
-        self.vel = np.clip(self.vel, -max_vel, max_vel)
         self.pos += self.vel * self.dt
         return self.pos  # 平滑后的目标位置
 
@@ -757,21 +745,21 @@ class LiveMPCVisualizer:
         ax.set_zlim(zmin, zmax)
 
     def update(self, rope_pos, cur_i=0,
-               cand_tip_traj=None, cand_cost=None, best_k_traj=None,
+               cand_tip_traj=None, cand_cost=None, m_mode_trajs=None,
                title=""):
         """
         rope_pos:      (P,3) torch/numpy
         cur_i:         int, current mpc step index
         cand_tip_traj: (K,H,3) torch/numpy
         cand_cost:     (K,) torch/numpy
-        best_k_traj:   (bestK,H,3) torch/numpy
+        m_mode_trajs:   (m modes,H,3) torch/numpy
         """
         rope_np = self._to_np(rope_pos)
         goal_np = self.goal_traj
 
         cand_np = self._to_np(cand_tip_traj)
         cost_np = self._to_np(cand_cost)
-        best_np = self._to_np(best_k_traj)
+        best_np = self._to_np(m_mode_trajs)
 
         ax = self.ax
         ax.clear()
