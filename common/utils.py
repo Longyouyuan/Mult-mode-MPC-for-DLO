@@ -54,8 +54,10 @@ class PositionCommandFilter:
         self.vel = initial_vel
         self.dt = dt
 
-    def input_acceleration(self, acc_cmd, max_vel=1.5):
+    def input_acceleration(self, acc_cmd, max_vel=np.inf):
         self.vel += acc_cmd * self.dt
+        self.vel = np.clip(self.vel, -max_vel, max_vel)
+
         self.pos += self.vel * self.dt
         return self.pos  # 平滑后的目标位置
 

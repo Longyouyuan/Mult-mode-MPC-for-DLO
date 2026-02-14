@@ -16,141 +16,169 @@ def cam_setting(viewer, fixed=True):
             viewer.cam.fixedcamid = 0
 
 
-def draw_line(start, end, width, rgba, viewer):
-    viewer.user_scn.ngeom += 1
-    geom = viewer.user_scn.geoms[viewer.user_scn.ngeom - 1]
-    size = [0.0, 0.0, 0.0]
-    pos = [0, 0, 0]
-    mat = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    mujoco.mjv_initGeom(geom, mujoco.mjtGeom.mjGEOM_SPHERE, size, pos, mat, rgba)
-    mujoco.mjv_connector(geom, mujoco.mjtGeom.mjGEOM_LINE, width, start, end)
-
-
-def draw_curve(points, viewer, rgba=None):
-    points = points.cpu().numpy()
-    if rgba is None:
-        rgba = [0.5, 0.5, 0.5, 0.5]
-    for i in range(points.shape[0]-1):
-        start = points[i]
-        end = points[i+1]
-        draw_line(start, end, 10, rgba, viewer)
-
-
-class FastMultiTrajDrawer:
-    def __init__(self, viewer, K, H, m,
-                 cand_alpha=0.25,
-                 mode_rgba=(0.2, 0.4, 1.0, 0.90),
+class TrajDrawer:
+    def __init__(self, viewer,
+                 goal_traj,             # (T,3) torch/numpy
+                 K, H, m,
+                 draw_candidates=True,
+                 draw_modes=True,
+                 goal_width_px=5,
+                 cand_width_px=2,
+                 mode_width_px=8,
+                 goal_rgba=(1.0, 1.0, 1.0, 0.2),
+                 mode_rgba=(1.0, 0.2, 0.4, 1.0),
                  lut_size=256):
-        """
-        这里省略你原来的 init（预分配 mjvGeom 的部分）
-        你只需要确保：
-          - self.viewer = viewer
-          - self.K, self.H, self.m
-          - self.cand_nseg = K*(H-1)
-          - self.mode_nseg = m*(H-1)
-          - viewer.user_scn.ngeom >= self.cand_nseg + self.mode_nseg
-        """
         self.viewer = viewer
+        self.scn = viewer.user_scn
+
         self.K = int(K)
         self.H = int(H)
         self.m = int(m)
-        self.cand_alpha = float(cand_alpha)
+
+        self.draw_candidates = bool(draw_candidates)
+        self.draw_modes = bool(draw_modes)
+
+        self.goal_width_px = float(goal_width_px)
+        self.cand_width_px = float(cand_width_px)
+        self.mode_width_px = float(mode_width_px)
+
+        self.goal_rgba = np.array(goal_rgba, dtype=np.float32)
         self.mode_rgba = np.array(mode_rgba, dtype=np.float32)
 
-        # LUT：matplotlib RdYlGn（和你之前实现一致）
+        # --- store goal ---
+        goal = np.asarray(goal_traj, dtype=np.float32)
+        assert goal.ndim == 2 and goal.shape[1] == 3, f"goal_traj must be (T,3), got {goal.shape}"
+        self.goal = goal
+        self.T = goal.shape[0]
+        self.nseg_goal = max(0, self.T - 1)
+
+        # --- segment counts ---
+        self.nseg_cand = self.K * (self.H - 1)
+        self.nseg_mode = self.m * (self.H - 1)
+
+        # 最坏情况：goal + cand + mode 全开
+        self.ngeom_need = self.nseg_goal + self.nseg_cand + self.nseg_mode
+
+        # --- color LUT (RdYlGn) ---
         cmap = plt.get_cmap("RdYlGn")
-        xs = np.linspace(0.0, 1.0, lut_size, dtype=np.float32)
-        lut = np.stack([cmap(float(x)) for x in xs], axis=0).astype(np.float32)  # (lut,4)
-        lut[:, 3] = self.cand_alpha
-        self.lut = lut
-        self.lut_size = lut_size
+        cmap = plt.get_cmap("viridis")
+        self.lut = cmap(np.linspace(0.0, 1.0, lut_size)).astype(np.float32)
+        self.lut[:, 3] = 0.75  # 所有候选线统一透明度
+        self.lut_size = int(lut_size)
 
-        self.cand_nseg = self.K * (self.H - 1)
-        self.mode_nseg = self.m * (self.H - 1)
+        # --- init geoms once ---
+        with self.viewer.lock():
+            if getattr(self.scn, "maxgeom", self.ngeom_need) < self.ngeom_need:
+                raise ValueError(f"user_scn.maxgeom too small: need {self.ngeom_need}, got {self.scn.maxgeom}")
 
-    @staticmethod
-    def _to_np(x):
-        if x is None:
-            return None
-        if hasattr(x, "detach"):
-            return x.detach().cpu().numpy()
-        return np.asarray(x)
+            self.scn.ngeom = self.ngeom_need
 
-    def update(self, cand_tip_traj, cand_cost, m_mode_trajs, offset=None):
+            eye = np.eye(3, dtype=np.float32).reshape(-1)
+            for i in range(self.ngeom_need):
+                mujoco.mjv_initGeom(
+                    self.scn.geoms[i],
+                    type=mujoco.mjtGeom.mjGEOM_LINE,
+                    size=np.array([1, 0, 0], np.float32),
+                    pos=np.zeros(3, np.float32),
+                    mat=eye,
+                    rgba=np.array([1, 1, 1, 1], np.float32)
+                )
+
+            # 初始先画一次 goal（否则第一帧可能是空的）
+            self._write_goal(off=np.zeros(3, np.float32))
+
+            # 默认只显示 goal（候选/模态等 update 再写）
+            self.scn.ngeom = self.nseg_goal
+
+    def set_flags(self, draw_candidates=None, draw_modes=None):
+        if draw_candidates is not None:
+            self.draw_candidates = bool(draw_candidates)
+        if draw_modes is not None:
+            self.draw_modes = bool(draw_modes)
+
+    def _write_goal(self, off):
+        idx = 0
+        for t in range(self.nseg_goal):
+            g = self.scn.geoms[idx]
+            p0 = self.goal[t] + off
+            p1 = self.goal[t + 1] + off
+            mujoco.mjv_connector(g, mujoco.mjtGeom.mjGEOM_LINE, self.goal_width_px, p0, p1)
+            g.rgba[:] = self.goal_rgba
+            idx += 1
+        return idx  # next free index
+
+    def update(self, cand_tip_traj=None, cand_cost=None, m_mode_trajs=None, offset=None):
         """
         cand_tip_traj: (K,H,3) torch/numpy
         cand_cost:     (K,)    torch/numpy
         m_mode_trajs:  (m,H,3) torch/numpy
-        offset:        (3,) or None
         """
-        cand_traj = self._to_np(cand_tip_traj)
-        cost = self._to_np(cand_cost)
-        modes = self._to_np(m_mode_trajs)
+        off = np.zeros(3, dtype=np.float32) if offset is None else np.asarray(offset, dtype=np.float32)
 
-        if cand_traj is None or cost is None or modes is None:
-            return
+        # cand
+        cand = None
+        if cand_tip_traj is not None and self.draw_candidates:
+            cand = np.asarray(cand_tip_traj, dtype=np.float32)
+            assert cand.shape == (self.K, self.H, 3), f"cand_tip_traj must be ({self.K},{self.H},3), got {cand.shape}"
 
-        # shape check（不报错也行，但建议你自己保证一致）
-        K, H, _ = cand_traj.shape
-        assert K == self.K and H == self.H, f"cand_traj shape {cand_traj.shape} != ({self.K},{self.H},3)"
-        assert cost.shape[0] == self.K, f"cand_cost shape {cost.shape} != ({self.K},)"
-        assert modes.shape[0] == self.m and modes.shape[1] == self.H, f"modes shape {modes.shape} != ({self.m},{self.H},3)"
+        # modes
+        modes = None
+        if m_mode_trajs is not None and self.draw_modes:
+            modes = np.asarray(m_mode_trajs, dtype=np.float32)
+            assert modes.ndim == 3 and modes.shape[1:] == (self.H, 3), f"m_mode_trajs must be (m,{self.H},3), got {modes.shape}"
 
-        if offset is None:
-            offset = np.zeros(3, dtype=np.float32)
+        # color weights
+        if cand is not None:
+            if cand_cost is not None:
+                cost = np.asarray(cand_cost, dtype=np.float32).reshape(-1)
+                assert cost.shape[0] == self.K
+                reward = -cost
+                rmin, rmax = float(reward.min()), float(reward.max())
+                denom = (rmax - rmin) if (rmax - rmin) > 1e-8 else 1.0
+                w = (reward - rmin) / denom
+            else:
+                w = np.full((self.K,), 0.5, dtype=np.float32)
+
+            idx_lut = np.clip((w * (self.lut_size - 1)).astype(np.int32), 0, self.lut_size - 1)
         else:
-            offset = np.asarray(offset, dtype=np.float32)
+            idx_lut = None
 
-        scn = self.viewer.user_scn
+        with self.viewer.lock():
+            idx = 0
 
-        # ---------- 颜色（完全对齐你 matplotlib：reward=-cost -> [0,1] -> RdYlGn）----------
-        reward = -cost
-        rmin = float(reward.min())
-        rmax = float(reward.max())
-        denom = (rmax - rmin) if (rmax - rmin) > 1e-8 else 1.0
-        w = (reward - rmin) / denom  # [0,1]
-        idx_lut = np.clip((w * (self.lut_size - 1)).astype(np.int32), 0, self.lut_size - 1)
+            # 1) goal 必画（每帧重写一次，保证不会被覆盖/残留）
+            idx = self._write_goal(off)
 
-        # ---------- 更新 geoms：用 fromto[0:3], fromto[3:6] ----------
-        idx = 0
-        seg = self.H - 1
+            # 2) candidates（可开关）
+            if cand is not None:
+                for k in range(self.K):
+                    rgba = self.lut[idx_lut[k]]
+                    tr = cand[k]
+                    for t in range(self.H - 1):
+                        g = self.scn.geoms[idx]
+                        p0 = tr[t] + off
+                        p1 = tr[t + 1] + off
+                        mujoco.mjv_connector(g, mujoco.mjtGeom.mjGEOM_LINE, self.cand_width_px, p0, p1)
+                        g.rgba[:] = rgba
+                        idx += 1
 
-        # 候选：每条轨迹一个颜色
-        for k in range(self.K):
-            rgba = self.lut[idx_lut[k]]
-            tr = cand_traj[k]
+            # 3) modes（可开关）
+            if modes is not None:
+                mm = min(self.m, modes.shape[0])
+                for k in range(mm):
+                    tr = modes[k]
+                    for t in range(self.H - 1):
+                        g = self.scn.geoms[idx]
+                        p0 = tr[t] + off
+                        p1 = tr[t + 1] + off
+                        mujoco.mjv_connector(g, mujoco.mjtGeom.mjGEOM_LINE, self.mode_width_px, p0, p1)
+                        g.rgba[:] = self.mode_rgba
+                        idx += 1
 
-            # 这条轨迹的所有段
-            for t in range(seg):
-                g = scn.geoms[idx]
+            self.scn.ngeom = idx
 
-                p0 = tr[t] + offset
-                p1 = tr[t + 1] + offset
 
-                # ✅ 兼容你当前版本：用 fromto
-                g.fromto[0:3] = p0
-                g.fromto[3:6] = p1
 
-                # 颜色
-                g.rgba[:] = rgba
-
-                idx += 1
-
-        # 模态：固定蓝色（更粗更亮由你 init 时的 size/rgba 决定，这里也再写一次）
-        for k in range(self.m):
-            tr = modes[k]
-            for t in range(seg):
-                g = scn.geoms[idx]
-
-                p0 = tr[t] + offset
-                p1 = tr[t + 1] + offset
-
-                g.fromto[0:3] = p0
-                g.fromto[3:6] = p1
-
-                g.rgba[:] = self.mode_rgba
-
-                idx += 1
 
 
 

@@ -36,7 +36,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 5.0
+T_task = 10.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -86,35 +86,35 @@ rope = WarpRope(
 
 # === 目标轨迹（保留原逻辑）===
 
-# === 1. Generate sin/egg/eight Trajs ===
-points = half_dense_then_uniform(
-    N=total_horizon + 1, ratio=0.5, sharpness=2.0,
-    mode='exp', interval=(0.0, 2.0), plot=False
-)
-
-# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=2, plot=False, device=device)  # 5s
-# Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-# Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
-Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
-                          torch.ones(total_horizon + 1) * 0.2)).T.to(device)
-plot_goal_traj(Goal_traj, T_task)
-
-# # === 2. Draw Traj ===
-# Goal_traj = build_goal_traj_from_drawn(
-#     drawn_path="../my_trajs/my_draw.npy",
-#     total_horizon=total_horizon,
-#     device=device,
-#     z0=0.2,
-#     scale_x=3.0,
-#     scale_y=3.0,
-#     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-#     sigma=10.0,  # 高斯顺滑
-#     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
-#     ratio=0.3,
-#     sharpness=2.0,
-#     interval=(0.0, 2.0)
+# # === 1. Generate sin/egg/eight Trajs ===
+# points = half_dense_then_uniform(
+#     N=total_horizon + 1, ratio=0.3, sharpness=2.0,
+#     mode='exp', interval=(0.0, 2.0), plot=False
 # )
+#
+# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)  # 5s
+# # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
+# # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+# # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
+# #                           torch.ones(total_horizon + 1) * 0.2)).T.to(device)
 # plot_goal_traj(Goal_traj, T_task)
+
+# === 2. Draw Traj ===
+Goal_traj = build_goal_traj_from_drawn(
+    drawn_path="../my_trajs/my_draw.npy",
+    total_horizon=total_horizon,
+    device=device,
+    z0=0.2,
+    scale_x=3.0,
+    scale_y=3.0,
+    keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
+    sigma=10.0,  # 高斯顺滑
+    uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
+    ratio=0.3,
+    sharpness=2.0,
+    interval=(0.0, 2.0)
+)
+plot_goal_traj(Goal_traj, T_task)
 
 planner = Planner(
         rope, cost_fn, dt, ctr_period, horizon,
@@ -146,10 +146,8 @@ planner.n_improve = n_improve
 with viewer.launch_passive(model, data) as viewer:
     # launch_passive means all the simulation should be done by the user
 
-    cam_setting(viewer, fixed=False)
+    cam_setting(viewer, fixed=True)
     viewer.showinfo = True  # 启动时就显示 info（等同于自动 F2）
-
-    draw_curve(Goal_traj, viewer)
 
     goal_his = []
     slider_pos = []
@@ -166,7 +164,10 @@ with viewer.launch_passive(model, data) as viewer:
     pcf = PositionCommandFilter(np.array([0.0, 0.0, 0.0]), data.sensordata[[0, 1, 2]], dt)
     Goal_np = Goal_traj.detach().cpu().numpy()
     body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "slide")
-    traj_drawer = None
+    k_cand = 100
+    traj_drawer = TrajDrawer(viewer, goal_traj=Goal_traj.cpu(),
+                             K=k_cand, H=horizon, m=m_modes,
+                             draw_candidates=True, draw_modes=True)
 
     task_t_start = time.perf_counter()
 
@@ -199,19 +200,8 @@ with viewer.launch_passive(model, data) as viewer:
         # visualization
         if visualization:
             if i % 1 == 0:
-                k_cand = 100
                 cand_tip_traj, cand_cost, m_mode_trajs = planner.get_cand(k_cand=k_cand)
-
-                if cand_tip_traj is not None:
-                    K, H, _ = cand_tip_traj.shape
-                    m = m_mode_trajs.shape[0] if m_mode_trajs is not None else 1
-
-                    if traj_drawer is None:
-                        traj_drawer = FastMultiTrajDrawer(
-                            viewer, K=K, H=H, m=m
-                        )
-
-                    traj_drawer.update(cand_tip_traj, cand_cost, m_mode_trajs, offset=None)
+                traj_drawer.update(cand_tip_traj.cpu(), cand_cost.cpu(), m_mode_trajs.cpu(), offset=None)
 
         # ---- 执行 chosen action in MuJoCo ----
         for j in range(ctr_period):
