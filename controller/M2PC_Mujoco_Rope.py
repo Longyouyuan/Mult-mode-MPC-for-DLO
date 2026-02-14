@@ -36,7 +36,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 10.0
+T_task = 15.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -48,18 +48,19 @@ n_sample = 400     # 总采样数
 m_modes = 1        # 模态数（单模态=1）
 assert n_sample % m_modes == 0
 
-n_improve = 10
+n_improve = 10  # 10 will be good. 1 also fine?
 noise_scale = 1.5  # 0.25 looks good for naive case, 1.5更好for naive case？
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])  # 15 太大了，不要太大
-total_horizon = int(total_steps / ctr_period)
+last_point_repeat = 100 * 0
+total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
 # diversity 超参
 top_k_good = 200
 beta = 5.0
 wJ = 0.0
 
-visualization = True
+visualization = False
 
 # === Setup device ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Comment this out
@@ -88,7 +89,7 @@ rope = WarpRope(
 
 # # === 1. Generate sin/egg/eight Trajs ===
 # points = half_dense_then_uniform(
-#     N=total_horizon + 1, ratio=0.3, sharpness=2.0,
+#     N=total_horizon + 1 - last_point_repeat, ratio=0.3, sharpness=2.0,
 #     mode='exp', interval=(0.0, 2.0), plot=False
 # )
 #
@@ -96,25 +97,28 @@ rope = WarpRope(
 # # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
 # # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
 # # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
-# #                           torch.ones(total_horizon + 1) * 0.2)).T.to(device)
+# #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
 # plot_goal_traj(Goal_traj, T_task)
 
 # === 2. Draw Traj ===
+
 Goal_traj = build_goal_traj_from_drawn(
-    drawn_path="../my_trajs/my_draw.npy",
-    total_horizon=total_horizon,
+    drawn_path="../my_trajs/PatrickStar.npy",  # SpongeBob flower PatrickStar
+    total_horizon=total_horizon-last_point_repeat,
     device=device,
     z0=0.2,
     scale_x=3.0,
     scale_y=3.0,
     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-    sigma=10.0,  # 高斯顺滑
+    sigma=0.0,  # 高斯顺滑
     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
     ratio=0.3,
     sharpness=2.0,
     interval=(0.0, 2.0)
 )
 plot_goal_traj(Goal_traj, T_task)
+
+Goal_traj = extend_last_point(Goal_traj, N=last_point_repeat)
 
 planner = Planner(
         rope, cost_fn, dt, ctr_period, horizon,

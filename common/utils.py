@@ -11,6 +11,7 @@ import matplotlib as mpl
 import math
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
+import os
 mpl.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
 
 
@@ -345,6 +346,7 @@ def plot_animation_3d_for_path_tracking(
     plt.show()
 
     return ani
+
 
 def plot_animation_3d_for_point_tracking(positions, goal, dt, record_interval=1, L=1.0, batch_idx=0):
     """
@@ -1031,27 +1033,29 @@ def build_goal_traj_from_drawn(
     return Goal_traj
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import simpledialog, messagebox
+
+
 def draw_traj_xy(
-    save_path="drawn_traj.npy",
+    save_dir=".",
     xlim=(-0.5, 0.5),
     ylim=(-0.5, 0.5),
-    figsize=(7, 7),
+    figsize=(10, 10),
     dpi=120
 ):
-    """
-    鼠标左键按住拖动绘制一条连续轨迹（单位：米）
-    xlim / ylim: 画布物理范围（米），可非正方形
-    """
+    os.makedirs(save_dir, exist_ok=True)
+
     pts = []
     drawing = {"on": False}
+    saved_path = {"value": None}   # ✅ 用 dict 作为可变闭包变量
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    # ✅ 关键：画布范围由你指定（物理坐标）
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-
-    # 是否强制等比例（建议开，防止形状被拉伸）
     ax.set_aspect("equal", adjustable="box")
 
     ax.set_title(
@@ -1072,6 +1076,67 @@ def draw_traj_xy(
             arr = np.asarray(pts, dtype=np.float32)
             line.set_data(arr[:, 0], arr[:, 1])
         fig.canvas.draw_idle()
+
+    def gui_ask_save_filename(default_name="drawn_traj.npy"):
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        try:
+            while True:
+                name = simpledialog.askstring(
+                    title="Save trajectory",
+                    prompt="Enter file name (e.g., my_traj or my_traj.npy):",
+                    initialvalue=default_name,
+                    parent=root,
+                )
+                if name is None:
+                    return None
+
+                name = name.strip()
+                if not name:
+                    messagebox.showwarning("Invalid", "Name cannot be empty.", parent=root)
+                    continue
+
+                if not name.lower().endswith(".npy"):
+                    name += ".npy"
+
+                full_path = os.path.join(save_dir, name)
+
+                if os.path.exists(full_path):
+                    ok = messagebox.askyesno(
+                        "File exists",
+                        f"{name} exists. Overwrite?",
+                        parent=root,
+                    )
+                    if not ok:
+                        continue
+
+                return full_path
+        finally:
+            root.destroy()
+
+    def on_key(event):
+        if event.key == "enter":
+            if len(pts) < 2:
+                return
+
+            arr = np.asarray(pts, dtype=np.float32)
+
+            full_path = gui_ask_save_filename()
+            if full_path is None:
+                return
+
+            np.save(full_path, arr)
+            saved_path["value"] = full_path   # ✅ 记录保存路径
+            plt.close(fig)
+
+        elif event.key == "backspace":
+            pts.clear()
+            redraw()
+
+        elif event.key == "escape":
+            plt.close(fig)
 
     def on_press(event):
         if event.inaxes != ax or event.button != 1:
@@ -1094,32 +1159,14 @@ def draw_traj_xy(
         if event.button == 1:
             drawing["on"] = False
 
-    def on_key(event):
-        if event.key == "enter":
-            if len(pts) < 2:
-                print("[draw] Too few points, not saved.")
-                plt.close(fig)
-                return
-            arr = np.asarray(pts, dtype=np.float32)
-            np.save(save_path, arr)
-            print(f"[draw] Saved: {save_path}, shape={arr.shape}")
-            plt.close(fig)
-
-        elif event.key == "backspace":
-            pts.clear()
-            redraw()
-
-        elif event.key == "escape":
-            print("[draw] Quit without saving.")
-            plt.close(fig)
-
     fig.canvas.mpl_connect("button_press_event", on_press)
     fig.canvas.mpl_connect("motion_notify_event", on_move)
     fig.canvas.mpl_connect("button_release_event", on_release)
     fig.canvas.mpl_connect("key_press_event", on_key)
 
     plt.show()
-    return save_path
+
+    return saved_path["value"]   # ✅ 关键：返回文件名
 
 
 def sin_traj(points, width=0.45, plot=False, device=None):
@@ -1761,6 +1808,15 @@ def get_goal_traj(total_time=2.5, curve_type='sin', ctr_period=10, device=torch.
         Goal_traj = eight_traj(points, scale_x=0.45 * 1.0, scale_y=0.65 * 1.0, z0=0.2, loops=1, plot=False, device=device)
 
     return Goal_traj
+
+
+def extend_last_point(traj, N):
+    """
+    traj: (T, D)
+    N:    int, 重复次数
+    """
+    last = traj[-1:].repeat(N, 1)   # (N, D)
+    return torch.cat([traj, last], dim=0)
 
 
 if __name__ == "__main__":
