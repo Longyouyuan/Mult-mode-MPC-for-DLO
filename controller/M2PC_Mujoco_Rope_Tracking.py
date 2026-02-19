@@ -36,7 +36,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 15.0
+T_task = 5.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -60,7 +60,7 @@ top_k_good = 200
 beta = 5.0
 wJ = 0.0
 
-visualization = False
+visualization = True
 
 # === Setup device ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Comment this out
@@ -87,36 +87,36 @@ rope = WarpRope(
 
 # === 目标轨迹（保留原逻辑）===
 
-# # === 1. Generate sin/egg/eight Trajs ===
-# points = half_dense_then_uniform(
-#     N=total_horizon + 1 - last_point_repeat, ratio=0.3, sharpness=2.0,
-#     mode='exp', interval=(0.0, 2.0), plot=False
-# )
-#
-# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)  # 5s
-# # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-# # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
-# # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
-# #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
-# plot_goal_traj(Goal_traj, T_task)
-
-# === 2. Draw Traj ===
-
-Goal_traj = build_goal_traj_from_drawn(
-    drawn_path="../my_trajs/PatrickStar.npy",  # SpongeBob flower PatrickStar
-    total_horizon=total_horizon-last_point_repeat,
-    device=device,
-    z0=0.2,
-    scale_x=3.0,
-    scale_y=3.0,
-    keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-    sigma=0.0,  # 高斯顺滑
-    uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
-    ratio=0.3,
-    sharpness=2.0,
-    interval=(0.0, 2.0)
+# === 1. Generate sin/egg/eight Trajs ===
+points = half_dense_then_uniform(
+    N=total_horizon + 1 - last_point_repeat, ratio=0.3, sharpness=2.0,
+    mode='exp', interval=(0.0, 2.0), plot=True
 )
+
+Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)  # 5s
+# Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
+# Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+# Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
+#                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
 plot_goal_traj(Goal_traj, T_task)
+
+# # === 2. Draw Traj ===
+#
+# Goal_traj = build_goal_traj_from_drawn(
+#     drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
+#     total_horizon=total_horizon-last_point_repeat,
+#     device=device,
+#     z0=0.2,
+#     scale_x=3.0,
+#     scale_y=3.0,
+#     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
+#     sigma=0.0,  # 高斯顺滑
+#     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
+#     ratio=0.3,
+#     sharpness=2.0,
+#     interval=(0.0, 2.0)
+# )
+# plot_goal_traj(Goal_traj, T_task)
 
 Goal_traj = extend_last_point(Goal_traj, N=last_point_repeat)
 
@@ -155,19 +155,19 @@ with viewer.launch_passive(model, data) as viewer:
 
     goal_his = []
     slider_pos = []
-    rope_tip = []
+    rope_top = []
 
     action_history = []
     vel_history = []
     pos_history = []
     time_record = []
 
-    node = len(body_names) - 1
+    node = len(cable_body_indices) + 1
     mj_state = np.zeros((1, 1 + node * 6 + 3))
 
     pcf = PositionCommandFilter(np.array([0.0, 0.0, 0.0]), data.sensordata[[0, 1, 2]], dt)
     Goal_np = Goal_traj.detach().cpu().numpy()
-    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "slide")
+    slider_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "slider")
     k_cand = 100
     traj_drawer = TrajDrawer(viewer, goal_traj=Goal_traj.cpu(),
                              K=k_cand, H=horizon, m=m_modes,
@@ -181,7 +181,7 @@ with viewer.launch_passive(model, data) as viewer:
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
-        mj_state[0, 1:1 + node * 3] = data.xpos[1:][::-1].reshape(-1)
+        mj_state[0, 1:1 + node * 3] = data.xpos[1:1+node][::-1].reshape(-1)
         mj_state[0, 1 + node * 3:-3] = data.sensordata
         pos, vel, _ = mj_data_to_my_data(N, mj_state.astype(np.float32), device=device)
 
@@ -221,15 +221,15 @@ with viewer.launch_passive(model, data) as viewer:
             global_goal_action_pos = pos_target + np.array([0.0, 0.0, 1.2])
             model.site_pos[0][[0, 1, 2]] = global_goal_action_pos
 
-            data.xfrc_applied[body_id, :3] = np.array([0.0, 0, 0.5 * 9.81])  # 施加力
+            data.xfrc_applied[slider_id, :3] = np.array([0.0, 0, 0.5 * 9.81])  # 施加力
 
             mujoco.mj_step(model, data)
 
         viewer.sync()  # let viewer show updated info
 
         goal_his.append(global_goal_action_pos)
-        slider_pos.append(data.xpos[-1].copy())
-        rope_tip.append(data.site_xpos[-1].copy())
+        slider_pos.append(data.xpos[slider_id].copy())
+        rope_top.append(data.site_xpos[-1].copy())
 
         action_history.append(action)
         vel_history.append(vel.clone())
@@ -300,7 +300,7 @@ time = list(range(len(goal_his)))
 # 将数据转换为numpy数组以便于操作
 goal_array = np.array(goal_his)
 slider_pos_array = np.array(slider_pos)
-rope_tip_array = np.array(rope_tip)
+rope_top_array = np.array(rope_top)
 ctr_history = np.array(action_history)
 
 # 创建带有三个子图的图形
@@ -309,7 +309,7 @@ fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 8))
 # 绘制x轴误差
 ax1.plot(time, goal_array[:, 0], label='Goal', color='blue', linestyle='-')
 ax1.plot(time, slider_pos_array[:, 0], label='Slider', color='green', linestyle='--')
-ax1.plot(time, rope_tip_array[:, 0], label='Rope Tip', color='red', linestyle=':')
+ax1.plot(time, rope_top_array[:, 0], label='Rope Top', color='red', linestyle=':')
 ax1.set_title('X-axis Position Tracking')
 ax1.set_xlabel('Time Step')
 ax1.set_ylabel('X Position')
@@ -318,8 +318,8 @@ ax1.legend()
 
 # 绘制y轴误差
 ax2.plot(time, goal_array[:, 1], label='Goal', color='blue', linestyle='-')
-ax2.plot(time, slider_pos_array[:, 1], label='Slider Position', color='green', linestyle='--')
-ax2.plot(time, rope_tip_array[:, 1], label='Rope Tip', color='red', linestyle=':')
+ax2.plot(time, slider_pos_array[:, 1], label='Slider', color='green', linestyle='--')
+ax2.plot(time, rope_top_array[:, 1], label='Rope Top', color='red', linestyle=':')
 ax2.set_title('Y-axis Position Tracking')
 ax2.set_xlabel('Time Step')
 ax2.set_ylabel('Y Position')
@@ -328,8 +328,8 @@ ax2.legend()
 
 # 绘制z轴误差
 ax3.plot(time, goal_array[:, 2], label='Goal', color='blue', linestyle='-')
-ax3.plot(time, slider_pos_array[:, 2], label='Slider Position', color='green', linestyle='--')
-ax3.plot(time, rope_tip_array[:, 2], label='Rope Tip', color='red', linestyle=':')
+ax3.plot(time, slider_pos_array[:, 2], label='Slider', color='green', linestyle='--')
+ax3.plot(time, rope_top_array[:, 2], label='Rope Top', color='red', linestyle=':')
 ax3.set_title('Z-axis Position Tracking')
 ax3.set_xlabel('Time Step')
 ax3.set_ylabel('Z Position')

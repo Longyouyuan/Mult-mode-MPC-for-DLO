@@ -1195,7 +1195,7 @@ def sin_traj(points, width=0.45, plot=False, device=None):
 
 
 def plot_tip_vs_goal_and_error(
-    pos_history, goal_traj, dt, record_interval, tip_idx=-1
+    pos_history, goal_traj, dt, record_interval, tip_idx=-1, dist=None
 ):
     """
     pos_history: Tensor (T,P,3) or (1,T,P,3)
@@ -1258,6 +1258,21 @@ def plot_tip_vs_goal_and_error(
     ax0.scatter(tip_np[0, 0], tip_np[0, 1], tip_np[0, 2],
                 s=40, label='Tip start')
 
+    # -------- disturbance points --------
+    if dist is not None:
+        dist_np = np.asarray(dist)
+
+        if dist_np.ndim == 2 and dist_np.shape[1] == 3:
+            ax0.scatter(dist_np[:, 0],
+                        dist_np[:, 1],
+                        dist_np[:, 2],
+                        marker='x',
+                        s=120,
+                        color=(1.0, 0.0, 0.0),
+                        linewidths=2,
+                        alpha=1.0, depthshade=False,
+                        label='Disturbance')
+
     ax0.set_xlabel("x")
     ax0.set_ylabel("y")
     ax0.set_zlabel("z")
@@ -1266,7 +1281,10 @@ def plot_tip_vs_goal_and_error(
     ax0.grid(True)
 
     # ---- enforce equal XYZ scale ----
-    all_pts = np.concatenate([tip_np, gt_np], axis=0)
+    if dist is not None:
+        all_pts = np.concatenate([tip_np, gt_np, dist_np], axis=0)
+    else:
+        all_pts = np.concatenate([tip_np, gt_np], axis=0)
     xmin, ymin, zmin = all_pts.min(axis=0)
     xmax, ymax, zmax = all_pts.max(axis=0)
 
@@ -1361,7 +1379,6 @@ def plot_goal_traj(goal_traj, T_task, title="Goal Trajectory",
         ax.set_zlim(z_min, z_max)
 
     plt.show()
-
 
 
 def eight_traj(points, scale_x=0.25, scale_y=0.45,
@@ -1817,6 +1834,154 @@ def extend_last_point(traj, N):
     """
     last = traj[-1:].repeat(N, 1)   # (N, D)
     return torch.cat([traj, last], dim=0)
+
+
+# ===================== Infinite Eight (warm + steady loop) =====================
+def eight_raw_from_u(u, scale_x=0.25, scale_y=0.45, z0=0.2, a=-0.2):
+    """不做平移的原始八字轨迹（用于统一shift/对齐）"""
+    t = u + a * torch.sin(2 * u)
+
+    sin_t = torch.sin(t)
+    cos_t = torch.cos(t)
+    denom = 1.0 + sin_t**2
+
+    y = -scale_x * cos_t / denom
+    x =  scale_y * (sin_t * cos_t) / denom
+    z = torch.ones_like(x) * z0
+
+    return torch.stack([x, y, z], dim=-1)  # (...,3)
+
+
+def make_warm_u(N_warm, du0, du_start_ratio=0.2, power=2.0, device="cpu"):
+    """
+    Warm phase u:
+    - du increases smoothly from du0*du_start_ratio to du0
+    - enforce last du == du0 => warm->steady C1 (velocity) continuity in u-space
+    """
+    device = torch.device(device)
+    assert N_warm >= 2
+
+    s0 = du0 * du_start_ratio
+    r = torch.linspace(0, 1, steps=N_warm - 1, device=device)
+    du = s0 + (du0 - s0) * (r ** power)
+    du[-1] = du0  # enforce exact match at transition
+
+    u = torch.zeros(N_warm, device=device)
+    u[1:] = torch.cumsum(du, dim=0)
+    return u
+
+
+def make_steady_u(N_steady, device="cpu"):
+    """
+    One steady cycle:
+    u = 0, 2π/N, ..., 2π*(N-1)/N
+    (no endpoint 2π) => looping has no duplicate point (no tiny "stop")
+    """
+    device = torch.device(device)
+    return (2 * math.pi) * torch.arange(N_steady, device=device) / N_steady
+
+
+class InfiniteEight2Buf:
+    """
+    Two buffers:
+    - warm: one-time startup acceleration segment
+    - steady: one-cycle steady segment (looped forever)
+    """
+    def __init__(self, warm_traj, steady_traj):
+        self.warm = warm_traj
+        self.steady = steady_traj
+        self.Nw = warm_traj.shape[0]
+        self.Ns = steady_traj.shape[0]
+        self.device = warm_traj.device
+        self.dtype = warm_traj.dtype
+
+    def get(self, k):
+        """
+        k: int or tensor
+        returns (...,3)
+        """
+        k = torch.as_tensor(k, device=self.device)
+        if k.ndim == 0:
+            ki = int(k.item())
+            if ki < self.Nw:
+                return self.warm[ki]
+            return self.steady[(ki - self.Nw) % self.Ns]
+
+        out = torch.empty((*k.shape, 3), device=self.device, dtype=self.dtype)
+        m = k < self.Nw
+        if m.any():
+            out[m] = self.warm[k[m].long()]
+        if (~m).any():
+            kk = (k[~m].long() - self.Nw) % self.Ns
+            out[~m] = self.steady[kk]
+        return out
+
+    def get_range(self, start=None, length=None):
+        k = torch.arange(start, start + length, device=self.device)
+        return self.get(k)
+
+
+def build_infinite_eight(
+    device="cpu",
+    scale_x=0.25, scale_y=0.45, z0=0.2,
+    a=-0.2,
+    N_warm=300, N_steady=300,
+    du_start_ratio=0.2,
+    warm_power=2.0,
+    dtype=torch.float32,
+):
+    device = torch.device(device)
+
+    # steady 每步相位步长
+    du0 = (2 * math.pi) / N_steady
+
+    # warm 相位（0 -> u_end）
+    u_warm = make_warm_u(
+        N_warm=N_warm, du0=du0,
+        du_start_ratio=du_start_ratio,
+        power=warm_power,
+        device=device
+    ).to(dtype)
+
+    # warm 轨迹（raw）
+    warm_raw = eight_raw_from_u(u_warm, scale_x=scale_x, scale_y=scale_y, z0=z0, a=a)
+
+    # 用 warm 的起点做全局 shift（两段共用，保证坐标系一致）
+    shift = warm_raw.reshape(-1, 3)[0].clone()
+    shift[2] = 0.0
+    warm_traj = warm_raw - shift
+
+    # steady 相位：从 warm 的末尾继续走（避免跳回起点）
+    # 注意：steady[0] 应该是 warm[-1] 的“下一个点”，所以用 u_end + du0
+    u_end = u_warm[-1]
+    u0 = u_end + du0
+
+    # 一圈 steady 相位采样（不含 endpoint），再加上起始相位偏移 u0
+    u_steady = u0 + (2 * math.pi) * torch.arange(N_steady, device=device, dtype=dtype) / N_steady
+
+    steady_raw = eight_raw_from_u(u_steady, scale_x=scale_x, scale_y=scale_y, z0=z0, a=a)
+    steady_traj = steady_raw - shift
+
+    return InfiniteEight2Buf(warm_traj, steady_traj)
+
+
+def traj_speed(traj, dt_step):
+    d = traj[1:] - traj[:-1]
+    v = torch.linalg.norm(d, dim=-1) / dt_step
+    return v
+
+
+def plot_one_loop(traj_loop, title="Steady loop (one cycle)"):
+    xy = traj_loop.detach().cpu()
+    plt.figure(figsize=(4, 4))
+    plt.plot(xy[:, 0], xy[:, 1], '-')
+    plt.scatter([xy[0, 0]], [xy[0, 1]], s=40, label="start")
+    plt.gca().set_aspect('equal', 'box')
+    plt.grid(True)
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":

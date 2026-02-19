@@ -57,7 +57,7 @@ class TrajDrawer:
         self.nseg_mode = self.m * (self.H - 1)
 
         # 最坏情况：goal + cand + mode 全开
-        self.ngeom_need = self.nseg_goal + self.nseg_cand + self.nseg_mode
+        self.ngeom_need = self.nseg_goal + self.nseg_cand * draw_candidates + self.nseg_mode * draw_modes
 
         # --- color LUT (RdYlGn) ---
         cmap = plt.get_cmap("RdYlGn")
@@ -85,7 +85,7 @@ class TrajDrawer:
                 )
 
             # 初始先画一次 goal（否则第一帧可能是空的）
-            self._write_goal(off=np.zeros(3, np.float32))
+            self.goal_id_next = self._write_goal(off=np.zeros(3, np.float32))
 
             # 默认只显示 goal（候选/模态等 update 再写）
             self.scn.ngeom = self.nseg_goal
@@ -147,7 +147,8 @@ class TrajDrawer:
             idx = 0
 
             # 1) goal 必画（每帧重写一次，保证不会被覆盖/残留）
-            idx = self._write_goal(off)
+            # idx = self._write_goal(off)
+            idx = self.goal_id_next
 
             # 2) candidates（可开关）
             if cand is not None:
@@ -177,7 +178,80 @@ class TrajDrawer:
 
             self.scn.ngeom = idx
 
+        return idx
 
+
+class ForceDrawer:
+    def __init__(self, viewer, base_geom_id, rgba=(1, 0, 0, 1), text_rgba=(1, 0, 0, 1), width_px=6):
+        self.viewer = viewer
+        self.scn = viewer.user_scn
+        self.base = int(base_geom_id)   # 从 TrajDrawer 的 ngeom_need 之后开始
+        self.width = float(width_px)
+        self.rgba = np.array(rgba, np.float32)
+        self.text_rgba = np.array(text_rgba, np.float32)
+
+        with self.viewer.lock():
+            eye = np.eye(3, dtype=np.float32).reshape(-1)
+
+            # ---- 箭头 geom ----
+            mujoco.mjv_initGeom(
+                self.scn.geoms[self.base],
+                type=mujoco.mjtGeom.mjGEOM_ARROW,   # 先占位
+                size=np.array([1, 0, 0], np.float32),
+                pos=np.zeros(3, np.float32),
+                mat=eye,
+                rgba=self.rgba.copy()
+            )
+
+            # ---- 文字 geom ----
+            mujoco.mjv_initGeom(
+                self.scn.geoms[self.base + 1],
+                type=mujoco.mjtGeom.mjGEOM_LABEL,
+                size=np.array([100.0, 100.0, 100.0]),
+                pos=np.zeros(3, np.float32),
+                mat=eye.flatten(),
+                rgba=self.text_rgba.copy()
+            )
+
+    def update(self, start_xyz, force_xyz=None, scale=0.1, idx_start=None):
+        """
+        start_xyz: (3,) 箭头起点
+        force_xyz: (3,) 力向量；None or 0 => 不画（透明）
+        idx_start: TrajDrawer.update() 返回的 idx_end，用于把 ngeom 扩展到包含箭头
+        """
+        p0 = np.asarray(start_xyz, np.float32)
+        arrow = self.scn.geoms[self.base]
+        label = self.scn.geoms[self.base + 1]
+
+        with self.viewer.lock():
+
+            if force_xyz is None or np.linalg.norm(force_xyz) < 1e-9:
+                arrow.rgba[3] = 0.0
+                label.rgba[3] = 0.0
+                if idx_start is not None:
+                    self.scn.ngeom = idx_start
+                return
+
+            f = np.asarray(force_xyz, np.float32)
+            p1 = p0 + scale * f
+
+            # ---- 画箭头 ----
+            mujoco.mjv_connector(
+                arrow,
+                mujoco.mjtGeom.mjGEOM_ARROW,
+                self.width,
+                p0, p1
+            )
+            arrow.rgba[:] = self.rgba
+
+            # ---- 画文字 ----
+            label.pos[:] = p0  # 文字放在箭头末端
+            label.label = f"Disturbance!"
+            label.rgba[:] = self.text_rgba
+            label.size[:] = np.array([1.0, 1.0, 1.0])
+
+            if idx_start is not None:
+                self.scn.ngeom = max(idx_start, self.base + 2)
 
 
 
