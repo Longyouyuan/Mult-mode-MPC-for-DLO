@@ -43,20 +43,20 @@ ctr_period = 25  # 1000/ctr_period Hz
 horizon = 30
 
 # ===== 多模态参数 =====
-n_sample = 400
-m_modes = 1
+n_sample = 400 * 4
+m_modes = 4
 assert n_sample % m_modes == 0
 
 n_improve = 10
-noise_scale = 1.5
+noise_scale = 2.0
 action_dim = 3
-limits = torch.tensor([-5.0, 5.0])
+limits = torch.tensor([-7.50, 7.50])
 total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
 top_k_good = 200
 beta = 5.0
-wJ = 0.0
+wJ = 3
 
 visualization = True
 
@@ -113,21 +113,21 @@ pos = torch.zeros((1, P, 3), device=device)
 pos[:, :, 2] = torch.linspace(1.2, 0.2, steps=P, device=device)
 vel = torch.zeros((1, P, 3), device=device)
 
-# ===================== Warm up seeds =====================
-# Use infinite-goal for the initial horizon, and correct time scale dt * ctr_period
-Goal_init = eight_inf.get_range(start=0, length=horizon + 1)              # (horizon+1,3)
-vel_start = (Goal_init[1:] - Goal_init[:-1]) / dt * ctr_period       # (horizon,3)
-vel_start = vel_start.to(device)
-
-planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
-if m_modes > 1:
-    planner.seeds[1:] += 0.05 * torch.randn_like(planner.seeds[1:])
-
-goal = eight_inf.get_range(start=1, length=horizon)  # (horizon,3)
-
-planner.n_improve = n_improve * 100
-planner.improve_policy(pos, vel, goal)
-planner.n_improve = n_improve
+# # ===================== Warm up seeds =====================
+# # Use infinite-goal for the initial horizon, and correct time scale dt * ctr_period
+# Goal_init = eight_inf.get_range(start=0, length=horizon + 1)              # (horizon+1,3)
+# vel_start = (Goal_init[1:] - Goal_init[:-1]) / dt * ctr_period       # (horizon,3)
+# vel_start = vel_start.to(device)
+#
+# planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
+# if m_modes > 1:
+#     planner.seeds[1:] += 0.05 * torch.randn_like(planner.seeds[1:])
+#
+# goal = eight_inf.get_range(start=1, length=horizon)  # (horizon,3)
+#
+# planner.n_improve = n_improve * 100
+# planner.improve_policy(pos, vel, goal)
+# planner.n_improve = n_improve
 
 # ===================== Viewer / Simulation loop =====================
 with viewer.launch_passive(model, data) as viewer:
@@ -155,6 +155,26 @@ with viewer.launch_passive(model, data) as viewer:
     cyl2_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cyl_2")
     model.body_pos[cyl1_body] = np.array([0.3, 0.2, 0.2])  # world position 相对于 parent（world）
     model.body_pos[cyl2_body] = np.array([0.3, 0.2, 0.2])
+    Obs_info = np.array([[0.06, 0.2, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])  # [[radius, half_height, None], [Obs1_pos], [Obs2_pos]]
+
+    # ===== 用你的 cable_body_indices 收集 rope 的 geom（rope 是 capsule）=====
+    cable_body_set = set(cable_body_indices)
+    rope_geom_ids = set()
+    for gid in range(model.ngeom):
+        if model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_CAPSULE and model.geom_bodyid[gid] in cable_body_set:
+            rope_geom_ids.add(gid)
+
+    # ===== 用你的 cyl1_body/cyl2_body 收集 cylinder 的 geom（cylinder 是 CYLINDER）=====
+    cyl_geom_ids = set()
+    for gid in range(model.ngeom):
+        if model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_CYLINDER:
+            b = model.geom_bodyid[gid]
+            if b == cyl1_body or b == cyl2_body:
+                cyl_geom_ids.add(gid)
+
+    print("[Collision] rope geoms:", len(rope_geom_ids), "cyl geoms:", cyl_geom_ids)
+    prev_hit = False  # 防刷屏：只在刚碰到时打印
+    hit_times = 0
 
     k_cand = 100
     # TrajDrawer still uses a finite window for drawing (Goal_traj over 5s)
@@ -166,7 +186,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     task_t_start = time.perf_counter()
 
-    for i in range(total_horizon*2):
+    for i in range(total_horizon*10):
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
@@ -180,9 +200,13 @@ with viewer.launch_passive(model, data) as viewer:
 
         # === MPC goal horizon: always full horizon (infinite) ===
         goal = eight_inf.get_range(start=i + 1, length=horizon)  # (horizon,3)
+        Obs_info[1, :] = data.xpos[cyl1_body].copy()  # (3,) numpy array
+        Obs_info[2, :] = data.xpos[cyl2_body].copy()
 
         t0 = time.perf_counter()
-        planner.improve_policy(pos, vel, goal)
+        planner.improve_policy(pos, vel, goal, Obs=Obs_info)
+        if torch.isinf(planner.J_star).any().item():
+            print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
         action = planner.get_action().cpu().numpy()
         t1 = time.perf_counter()
         time_record.append(t1 - t0)
@@ -211,6 +235,19 @@ with viewer.launch_passive(model, data) as viewer:
             mujoco.mj_step(model, data)
 
         viewer.sync()
+
+        hit = False
+        for ci in range(data.ncon):
+            c = data.contact[ci]
+            g1, g2 = c.geom1, c.geom2
+            if (g1 in rope_geom_ids and g2 in cyl_geom_ids) or (g2 in rope_geom_ids and g1 in cyl_geom_ids):
+                hit = True
+                break
+
+        if hit and (not prev_hit):
+            hit_times += 1
+            print(f"[t={data.time:.4f}] Rope touches cylinder {hit_times} times!")
+        prev_hit = hit
 
         goal_his.append(global_goal_action_pos)
         slider_pos.append(data.xpos[slider_id].copy())
@@ -318,35 +355,3 @@ ax3.legend()
 
 plt.tight_layout()
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

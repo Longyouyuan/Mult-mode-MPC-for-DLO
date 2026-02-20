@@ -111,7 +111,7 @@ class Planner:
 
     # ------------------------------------------------------------
     @torch.no_grad()
-    def rollout(self, pos, vel, batch_ctr_parameter_full):
+    def rollout(self, pos, vel, batch_ctr_parameter_full, full=False):
         """
         pos, vel: (1,P,3)
         batch_ctr_parameter_full: (B,H,3)
@@ -119,7 +119,11 @@ class Planner:
         """
         self.rope.set_state_and_action(pos, vel, batch_ctr_parameter_full)
         traj = self.rope.simulate(steps=self.horizon * self.ctr_period)  # (B,H,P,3)
-        return traj[:, :, -1, :]  # (B,H,3) 只取末端
+
+        if full is False:
+            return traj[:, :, -1, :]  # (B,H,3) 只取末端
+        else:
+            return traj  # (B,H,P,3) 所有
 
     # ------------------------------------------------------------
     @torch.no_grad()
@@ -151,13 +155,19 @@ class Planner:
 
     # ------------------------------------------------------------
     @torch.no_grad()
-    def improve_policy(self, pos, vel, goal):
+    def improve_policy(self, pos, vel, goal, Obs=None):
         goal = self._pad_goal_to_horizon(goal)  # (H,3)
 
         for _ in range(self.n_improve):
             batch_ctr_parameter = self._build_candidates_full_horizon()  # (B,H,3)
-            batch_traj = self.rollout(pos, vel, batch_ctr_parameter)     # (B,H,3)
-            cost = self.cost_fn(batch_traj, goal)                        # (B,)
+
+            if Obs is None:
+                batch_traj = self.rollout(pos, vel, batch_ctr_parameter)     # (B,H,3)
+                cost = self.cost_fn(batch_traj, goal)                        # (B,)
+            else:
+                batch_traj = self.rollout(pos, vel, batch_ctr_parameter, full=True)  # (B,H,P，3)
+                cost = self.cost_fn(batch_traj, goal, Obs=Obs)
+                batch_traj = batch_traj[:, :, -1, :]
 
             if self.m == 1:
                 idx = int(cost.argmin().item())
@@ -271,9 +281,45 @@ class Planner:
         return k_tip_traj, k_cost, self.traj_seeds
 
 
-def cost_fn(batch_traj, goal_h):
-    err = batch_traj - goal_h.unsqueeze(0)
-    return torch.sum(torch.abs(err), dim=(1, 2))
+@torch.no_grad()
+def collide_two_cylinders(pts, c1, c2, radius, half_h, margin=0.0):
+    r = radius + margin
+    h = half_h + margin
+    r2 = r * r
+
+    def _hit(center):
+        dx = pts[..., 0] - center[0]
+        dy = pts[..., 1] - center[1]
+        dz = pts[..., 2] - center[2]
+        return ((dx*dx + dy*dy) <= r2) & (dz.abs() <= h)   # (B,H,P)
+
+    hit = _hit(c1) | _hit(c2)
+    return hit.any(dim=2).any(dim=1)  # (B,)
+
+
+def cost_fn(batch_traj, goal_h, Obs=None):
+    if Obs is None and batch_traj.dim() == 3:
+        err = batch_traj - goal_h.unsqueeze(0)
+        return torch.sum(torch.abs(err), dim=(1, 2))
+    elif Obs is not None and batch_traj.dim() == 4:
+        margin = 0.02
+        collision_cost = float("inf")
+
+        tip = batch_traj[:, :, -1, :]  # (B,H,3)
+        err = tip - goal_h.unsqueeze(0)
+        J_track = torch.sum(torch.abs(err), dim=(1, 2))  # (B,)
+
+        Obs_t = torch.as_tensor(Obs, device=tip.device, dtype=tip.dtype)
+        r0, h0 = Obs_t[0, 0], Obs_t[0, 1]
+        c1, c2 = Obs_t[1, :], Obs_t[2, :]
+
+        hit = collide_two_cylinders(batch_traj, c1, c2, r0, h0, margin=margin)
+
+        # 碰撞淘汰（argmin => +inf）
+        J = torch.where(hit, torch.full_like(J_track, float(collision_cost)), J_track)
+        return J
+    else:
+        raise ValueError("Cost_fn doesn't know if there is Obstacle")
 
 
 if __name__ == "__main__":

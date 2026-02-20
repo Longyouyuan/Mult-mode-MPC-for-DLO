@@ -59,14 +59,14 @@
     <body name="cyl_1" pos="0.3 0.2 -1.0">
       <joint name="cyl_1_x" type="slide" axis="1 0 0" damping="100.0"/>    <!--1.0-->
       <joint name="cyl_1_y" type="slide" axis="0 1 0" damping="100.0"/>
-      <geom type="cylinder" size="0.06 0.2" rgba="1.0 0.45 0.0 1"/>
+      <geom type="cylinder" size="0.05 0.15" rgba="1.0 0.45 0.0 1.0"/>
     </body>
 
     <!-- cylinder 2 -->
     <body name="cyl_2" pos="0.6 0.4 -1.0">
       <joint name="cyl_2_x" type="slide" axis="1 0 0" damping="100.0"/>    <!--1.0-->
       <joint name="cyl_2_y" type="slide" axis="0 1 0" damping="100.0"/>
-      <geom type="cylinder" size="0.06 0.2" rgba="0.75 0.3 0.9 1"/>
+      <geom type="cylinder" size="0.05 0.15" rgba="0.75 0.3 0.9 1.0"/>
 <!--      size = [radius, half_height]-->
     </body>
 
