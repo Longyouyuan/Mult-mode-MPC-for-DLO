@@ -1965,6 +1965,24 @@ def build_infinite_eight(
     return InfiniteEight2Buf(warm_traj, steady_traj)
 
 
+import random
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    # 如果用 GPU
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    # # 保证每次卷积等操作一致（会稍微慢一点）
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+
+    # # 更严格（PyTorch 1.8+）
+    # torch.use_deterministic_algorithms(True)
+
+
 def traj_speed(traj, dt_step):
     d = traj[1:] - traj[:-1]
     v = torch.linalg.norm(d, dim=-1) / dt_step

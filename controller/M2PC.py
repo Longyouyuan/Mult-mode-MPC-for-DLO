@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import time
 from common.utils import *
 from common.rope_warp_4 import WarpRope, N, P
+import warnings
 
 # ============================================================
 # Multi-Modal Planner
@@ -23,7 +24,7 @@ class Planner:
 
     def __init__(self, rope: WarpRope, cost_fn, dt, ctr_period, horizon, n_sample, n_improve,
                  noise_scale, action_dim, limits=None, device='cpu', mode='acc',
-                 m_modes=1, top_k_good=200, beta=5.0, wJ=1.0, standard_m2pc=True):
+                 m_modes=1, top_k_good=200, beta=1.0, wJ=1.0, standard_m2pc=True):
 
         self.rope = rope
         self.cost_fn = cost_fn
@@ -125,16 +126,42 @@ class Planner:
         else:
             return traj  # (B,H,P,3) 所有
 
+
     # ------------------------------------------------------------
     @torch.no_grad()
-    def _greedy_select(self, cost_g, tip_traj_g):
+    def _greedy_select(self, cost_g_org, tip_traj_g_org, thr=1e5):
         """
-        cost_g: (K,)
-        tip_traj_g: (K,H,3)
+        cost_g_org: (K,)
+        tip_traj_g_org: (K,H,3)
         return selected indices in [0..K-1], size=m
         """
 
-        feat = tip_traj_g.reshape(tip_traj_g.shape[0], -1)
+        # 统计“正常候选”的数量（因为已排序，所以就是从头开始连续的一段）
+        valid_n = int((cost_g_org < thr).sum().item())
+
+        # 0个：全碰撞
+        if valid_n == 0:
+            warnings.warn(
+                f"[greedy_select] valid_n=0 (all cost >= {thr:.2e}). "
+                f"Fallback: return first {self.m} indices.",
+                category=UserWarning
+            )
+            return torch.arange(self.m, device=self.device, dtype=torch.long)
+        # 1-m个：可能不够
+        elif valid_n <= self.m:
+            return torch.arange(self.m, device=self.device, dtype=torch.long)
+
+        def minmax_norm(v, eps=1e-8):
+            vmin = v.min()
+            vmax = v.max()
+            if (vmax - vmin) < 1e-12:
+                return torch.zeros_like(v)
+            return (v - vmin) / (vmax - vmin + eps)
+
+        cost_g = cost_g_org[:valid_n]
+        tip_traj_g = tip_traj_g_org[:valid_n]
+
+        feat = tip_traj_g.reshape(valid_n, -1)
         dist2 = torch.cdist(feat, feat, p=2) ** 2           # (K,K)
 
         # init with minimum cost
@@ -143,8 +170,11 @@ class Planner:
 
         div_sum = dist2[:, first].clone()
 
+        c_norm = minmax_norm(cost_g)
         while len(selected) < self.m:
-            score = -self.wJ * cost_g + self.beta * div_sum
+            d_norm = minmax_norm(div_sum)
+
+            score = -self.wJ * c_norm + self.beta * d_norm
             score[selected] = -1e18
 
             nxt = int(torch.argmax(score).item())
@@ -303,11 +333,14 @@ def cost_fn(batch_traj, goal_h, Obs=None):
         return torch.sum(torch.abs(err), dim=(1, 2))
     elif Obs is not None and batch_traj.dim() == 4:
         margin = 0.02
-        collision_cost = float("inf")
+        # collision_cost = float("inf")
+        collision_cost = 1e8
 
         tip = batch_traj[:, :, -1, :]  # (B,H,3)
         err = tip - goal_h.unsqueeze(0)
-        J_track = torch.sum(torch.abs(err), dim=(1, 2))  # (B,)
+        w = torch.tensor([1.8, 1.8, 1.0], device=err.device)
+        J_track = torch.sum(torch.abs(err) * w, dim=(1, 2))
+        # J_track = torch.sum(torch.abs(err), dim=(1, 2))  # (B,)
 
         Obs_t = torch.as_tensor(Obs, device=tip.device, dtype=tip.dtype)
         r0, h0 = Obs_t[0, 0], Obs_t[0, 1]
@@ -316,7 +349,8 @@ def cost_fn(batch_traj, goal_h, Obs=None):
         hit = collide_two_cylinders(batch_traj, c1, c2, r0, h0, margin=margin)
 
         # 碰撞淘汰（argmin => +inf）
-        J = torch.where(hit, torch.full_like(J_track, float(collision_cost)), J_track)
+        # J = torch.where(hit, torch.full_like(J_track, float(collision_cost)), J_track)
+        J = torch.where(hit, J_track + collision_cost, J_track)
         return J
     else:
         raise ValueError("Cost_fn doesn't know if there is Obstacle")

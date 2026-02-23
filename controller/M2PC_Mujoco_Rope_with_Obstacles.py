@@ -4,6 +4,7 @@ from Mujoco_env.mj_utils import *
 from common.utils import *
 from M2PC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
+import warnings
 
 
 # ===================== MuJoCo setup =====================
@@ -40,29 +41,30 @@ total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
 ctr_period = 25  # 1000/ctr_period Hz
-horizon = 30
+horizon = 35
 
 # ===== 多模态参数 =====
-n_sample = 400 * 4
-m_modes = 4
+n_sample = 402 * 3
+m_modes = 3
 assert n_sample % m_modes == 0
 
 n_improve = 10
 noise_scale = 2.0
 action_dim = 3
-limits = torch.tensor([-7.50, 7.50])
+limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
-top_k_good = 200
-beta = 5.0
-wJ = 3
+top_k_good = 200 * 3
+beta = 1.0
+wJ = 1.5
 
 visualization = True
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
+set_seed(0)
 
 # ===================== Rope model instance =====================
 rope = WarpRope(
@@ -153,8 +155,8 @@ with viewer.launch_passive(model, data) as viewer:
 
     cyl1_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cyl_1")
     cyl2_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cyl_2")
-    model.body_pos[cyl1_body] = np.array([0.3, 0.2, 0.2])  # world position 相对于 parent（world）
-    model.body_pos[cyl2_body] = np.array([0.3, 0.2, 0.2])
+    model.body_pos[cyl1_body] = np.array([0.433, 0.26, -1.0])  # world position 相对于 parent（world）
+    model.body_pos[cyl2_body] = np.array([0.0, 0.9, 0.2])
     Obs_info = np.array([[0.06, 0.2, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])  # [[radius, half_height, None], [Obs1_pos], [Obs2_pos]]
 
     # ===== 用你的 cable_body_indices 收集 rope 的 geom（rope 是 capsule）=====
@@ -172,7 +174,14 @@ with viewer.launch_passive(model, data) as viewer:
             if b == cyl1_body or b == cyl2_body:
                 cyl_geom_ids.add(gid)
 
-    print("[Collision] rope geoms:", len(rope_geom_ids), "cyl geoms:", cyl_geom_ids)
+    for gid in cyl_geom_ids:
+        radius = model.geom_size[gid][0]
+        half_height = model.geom_size[gid][1]
+        Obs_info[0, 0] = radius
+        Obs_info[0, 1] = half_height
+        print("radius:", radius, "half_height:", half_height)
+
+    # print("[Collision] rope geoms:", len(rope_geom_ids), "cyl geoms:", cyl_geom_ids)
     prev_hit = False  # 防刷屏：只在刚碰到时打印
     hit_times = 0
 
@@ -186,7 +195,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     task_t_start = time.perf_counter()
 
-    for i in range(total_horizon*10):
+    for i in range(total_horizon*2):
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
@@ -202,12 +211,13 @@ with viewer.launch_passive(model, data) as viewer:
         goal = eight_inf.get_range(start=i + 1, length=horizon)  # (horizon,3)
         Obs_info[1, :] = data.xpos[cyl1_body].copy()  # (3,) numpy array
         Obs_info[2, :] = data.xpos[cyl2_body].copy()
+        # print("Obs1:", Obs_info[1, :], " Obs2:", Obs_info[2, :])
 
         t0 = time.perf_counter()
         planner.improve_policy(pos, vel, goal, Obs=Obs_info)
         if torch.isinf(planner.J_star).any().item():
             print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
-        action = planner.get_action().cpu().numpy()
+        action = planner.get_action(rule='sample').cpu().numpy()
         t1 = time.perf_counter()
         time_record.append(t1 - t0)
 
@@ -246,7 +256,12 @@ with viewer.launch_passive(model, data) as viewer:
 
         if hit and (not prev_hit):
             hit_times += 1
-            print(f"[t={data.time:.4f}] Rope touches cylinder {hit_times} times!")
+            # print(f"[t={data.time:.4f}] Rope touches cylinder {hit_times} times!")
+            warnings.warn(
+                f"[t={data.time:.4f}] Rope touches cylinder {hit_times} times!",
+                category=UserWarning
+            )
+
         prev_hit = hit
 
         goal_his.append(global_goal_action_pos)
