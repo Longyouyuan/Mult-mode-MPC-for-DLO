@@ -126,6 +126,32 @@ class Planner:
         else:
             return traj  # (B,H,P,3) 所有
 
+    # @torch.no_grad()
+    # def _greedy_select(self, cost_g, tip_traj_g):
+    #     """
+    #     cost_g: (K,)
+    #     tip_traj_g: (K,H,3)
+    #     return selected indices in [0..K-1], size=m
+    #     """
+    #
+    #     feat = tip_traj_g.reshape(tip_traj_g.shape[0], -1)
+    #     dist2 = torch.cdist(feat, feat, p=2) ** 2  # (K,K)
+    #
+    #     # init with minimum cost
+    #     first = int(0)  # first = int(torch.argmin(cost_g).item())
+    #     selected = [first]
+    #
+    #     div_sum = dist2[:, first].clone()
+    #
+    #     while len(selected) < self.m:
+    #         score = -self.wJ * cost_g + self.beta * div_sum
+    #         score[selected] = -1e18
+    #
+    #         nxt = int(torch.argmax(score).item())
+    #         selected.append(nxt)
+    #         div_sum += dist2[:, nxt]
+    #
+    #     return torch.tensor(selected, device=self.device, dtype=torch.long)
 
     # ------------------------------------------------------------
     @torch.no_grad()

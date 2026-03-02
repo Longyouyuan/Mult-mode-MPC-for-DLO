@@ -385,15 +385,15 @@ if __name__ == "__main__":
     # sampled_data = np.load('../data/static_init_with_xyz_drive.npy').astype(np.float32)
     position_data, velocity_data, control_sequence = mj_data_to_my_data(N, sampled_data, device)
 
-    ctr_period = 1
+    ctr_period = 25
     record_interval = 25
     sim = WarpRope(
-        batch_size=1280,
+        batch_size=400,
         L=1.0,
         mass=0.0025 * 40 / N,
         k=10000 * 0.46,
         damping=0.2,
-        bending_k=0.0006712,
+        bending_k=0.0006712 * 0.0,
         bending_damping=0.000401,
         air_drag=0.2206 / 1000,
         g=10.07,
@@ -468,6 +468,6 @@ if __name__ == "__main__":
         for _ in range(n):
             sim.set_state_and_action(position_data[0:1], velocity_data[0:1], control_sequence[:750 // ctr_period])
             traj_warp = sim.simulate(steps=steps)
-        wp.synchronize()
+        # wp.synchronize()
         t1 = time.perf_counter()
-        print("Average time:", (t1 - t0) / n)
+        print("Average time:", (t1 - t0) / n, " required time:", steps/1000/30)

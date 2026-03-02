@@ -44,7 +44,7 @@ ctr_period = 25  # 1000/ctr_period Hz
 horizon = 35
 
 # ===== 多模态参数 =====
-n_sample = 402 * 3
+n_sample = 402 * 1
 m_modes = 3
 assert n_sample % m_modes == 0
 
@@ -155,7 +155,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     cyl1_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cyl_1")
     cyl2_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cyl_2")
-    model.body_pos[cyl1_body] = np.array([0.433, 0.26, -1.0])  # world position 相对于 parent（world）
+    model.body_pos[cyl1_body] = np.array([0.433, 0.26, -1.2])  # world position 相对于 parent（world）
     model.body_pos[cyl2_body] = np.array([0.0, 0.9, 0.2])
     Obs_info = np.array([[0.06, 0.2, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])  # [[radius, half_height, None], [Obs1_pos], [Obs2_pos]]
 
@@ -217,7 +217,7 @@ with viewer.launch_passive(model, data) as viewer:
         planner.improve_policy(pos, vel, goal, Obs=Obs_info)
         if torch.isinf(planner.J_star).any().item():
             print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
-        action = planner.get_action(rule='sample').cpu().numpy()
+        action = planner.get_action(rule='greedy').cpu().numpy()  # sample
         t1 = time.perf_counter()
         time_record.append(t1 - t0)
 

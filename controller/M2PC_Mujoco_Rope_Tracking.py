@@ -36,7 +36,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 5.0
+T_task = 15.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -87,36 +87,36 @@ rope = WarpRope(
 
 # === 目标轨迹（保留原逻辑）===
 
-# === 1. Generate sin/egg/eight Trajs ===
-points = half_dense_then_uniform(
-    N=total_horizon + 1 - last_point_repeat, ratio=0.3, sharpness=2.0,
-    mode='exp', interval=(0.0, 2.0), plot=True
-)
-
-Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)  # 5s
-# Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-# Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
-# Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
-#                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
-plot_goal_traj(Goal_traj, T_task)
-
-# # === 2. Draw Traj ===
-#
-# Goal_traj = build_goal_traj_from_drawn(
-#     drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
-#     total_horizon=total_horizon-last_point_repeat,
-#     device=device,
-#     z0=0.2,
-#     scale_x=3.0,
-#     scale_y=3.0,
-#     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-#     sigma=0.0,  # 高斯顺滑
-#     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
-#     ratio=0.3,
-#     sharpness=2.0,
-#     interval=(0.0, 2.0)
+# # === 1. Generate sin/egg/eight Trajs ===
+# points = half_dense_then_uniform(
+#     N=total_horizon + 1 - last_point_repeat, ratio=0.3, sharpness=2.0,
+#     mode='exp', interval=(0.0, 2.0), plot=False
 # )
+#
+# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)  # 5s
+# # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
+# # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+# # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
+# #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
 # plot_goal_traj(Goal_traj, T_task)
+
+# === 2. Draw Traj ===
+
+Goal_traj = build_goal_traj_from_drawn(
+    drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
+    total_horizon=total_horizon-last_point_repeat,
+    device=device,
+    z0=0.2,
+    scale_x=3.0,
+    scale_y=3.0,
+    keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
+    sigma=0.0,  # 高斯顺滑
+    uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
+    ratio=0.3,
+    sharpness=2.0,
+    interval=(0.0, 2.0)
+)
+plot_goal_traj(Goal_traj, T_task)
 
 Goal_traj = extend_last_point(Goal_traj, N=last_point_repeat)
 
@@ -132,20 +132,20 @@ pos = torch.zeros((1, P, 3), device=device)
 pos[:, :, 2] = torch.linspace(1.2, 0.2, steps=P, device=device)
 vel = torch.zeros((1, P, 3), device=device)
 
-# ==================== warm up ========================
-vel_start = (Goal_traj[1:1 + horizon, :] - Goal_traj[:horizon, :]) / (T_task / horizon)
-vel_start = vel_start.to(device)
-
-# 初始化所有模态 seeds = vel_start (+小扰动让模态更容易分开)
-planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
-if m_modes > 1:
-    planner.seeds[1:] += 0.05 * torch.randn_like(planner.seeds[1:])
-
-goal = Goal_traj[1:1 + horizon, :]
-
-planner.n_improve = n_improve * 100
-planner.improve_policy(pos, vel, goal)
-planner.n_improve = n_improve
+# # ==================== warm up ========================
+# vel_start = (Goal_traj[1:1 + horizon, :] - Goal_traj[:horizon, :]) / (T_task / horizon)
+# vel_start = vel_start.to(device)
+#
+# # 初始化所有模态 seeds = vel_start (+小扰动让模态更容易分开)
+# planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
+# if m_modes > 1:
+#     planner.seeds[1:] += 0.05 * torch.randn_like(planner.seeds[1:])
+#
+# goal = Goal_traj[1:1 + horizon, :]
+#
+# planner.n_improve = n_improve * 1
+# planner.improve_policy(pos, vel, goal)
+# planner.n_improve = n_improve
 
 with viewer.launch_passive(model, data) as viewer:
     # launch_passive means all the simulation should be done by the user
