@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from common.utils import *
-from common.rope_warp_4 import WarpRope, N, P
+from common.rope_warp_4_baserope import WarpRope, N, P
 import warnings
 
 # ============================================================
@@ -54,7 +54,7 @@ class Planner:
         # batch = m 个 seeds + n_sample 个扰动样本
         self.batch = self.m + self.n_sample
 
-        # 多模态 seeds: (m, H, 3)
+        # 多模态 action seeds: (m, H, 3)
         self.seeds = torch.zeros((self.m, self.horizon, self.action_dim),
                                  device=self.device, dtype=torch.float32)
         self.J_star = torch.zeros(self.m, device=self.device, dtype=torch.float32)
@@ -122,7 +122,7 @@ class Planner:
         traj = self.rope.simulate(steps=self.horizon * self.ctr_period)  # (B,H,P,3)
 
         if full is False:
-            return traj[:, :, -1, :]  # (B,H,3) 只取末端
+            return traj[:, :, 0, :]  # (B,H,3) 只取末端  # careful about here
         else:
             return traj  # (B,H,P,3) 所有
 
@@ -416,7 +416,7 @@ if __name__ == "__main__":
     beta = 5.0
     wJ = 0.0
 
-    visualization = False
+    visualization = True
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
@@ -459,33 +459,33 @@ if __name__ == "__main__":
 
     # === 目标轨迹（保留原逻辑）===
 
-    # # === 1. Generate sin/egg/eight Trajs ===
-    # points = half_dense_then_uniform(
-    #     N=total_horizon + 1, ratio=0.3, sharpness=2.0,
-    #     mode='exp', interval=(0.0, 2.0), plot=False
-    # )
-    #
-    # Goal_traj = eight_traj(points, scale_x=0.45*3.0, scale_y=0.65*3.0, z0=0.2, loops=1, plot=False, device=device)
-    # # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-    # # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
-    # plot_goal_traj(Goal_traj, T_task)
-
-    # === 2. Draw Traj ===
-    Goal_traj = build_goal_traj_from_drawn(
-        drawn_path="../my_trajs/my_draw.npy",
-        total_horizon=total_horizon,
-        device=device,
-        z0=0.2,
-        scale_x=3.0,
-        scale_y=3.0,
-        keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-        sigma=2.0,
-        uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
-        ratio=0.3,
-        sharpness=2.0,
-        interval=(0.0, 2.0)
+    # === 1. Generate sin/egg/eight Trajs ===
+    points = half_dense_then_uniform(
+        N=total_horizon + 1, ratio=0.3, sharpness=2.0,
+        mode='exp', interval=(0.0, 2.0), plot=False
     )
+
+    Goal_traj = eight_traj(points, scale_x=0.45*3.0, scale_y=0.65*3.0, z0=0.2, loops=1, plot=False, device=device)
+    # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
+    # Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
     plot_goal_traj(Goal_traj, T_task)
+
+    # # === 2. Draw Traj ===
+    # Goal_traj = build_goal_traj_from_drawn(
+    #     drawn_path="../my_trajs/SpongeBob.npy",
+    #     total_horizon=total_horizon,
+    #     device=device,
+    #     z0=0.2,
+    #     scale_x=3.0,
+    #     scale_y=3.0,
+    #     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
+    #     sigma=2.0,
+    #     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
+    #     ratio=0.3,
+    #     sharpness=2.0,
+    #     interval=(0.0, 2.0)
+    # )
+    # plot_goal_traj(Goal_traj, T_task)
 
     planner = Planner(
         rope, cost_fn, dt, ctr_period, horizon,

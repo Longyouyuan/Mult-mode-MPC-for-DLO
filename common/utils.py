@@ -1382,7 +1382,7 @@ def plot_goal_traj(goal_traj, T_task, title="Goal Trajectory",
 
 
 def eight_traj(points, scale_x=0.25, scale_y=0.45,
-               z0=0.2, loops=1, plot=False, device="cpu"):
+               z0=0.2, loops=1, plot=False, device="cpu", bias=None):
     """
     生成一个从 (0,0,z0) 开始的 3D 八字形（lemniscate）轨迹，
     并通过时间重参数化，让上下转弯处走得更慢，中间走得更快。
@@ -1412,6 +1412,11 @@ def eight_traj(points, scale_x=0.25, scale_y=0.45,
     start = traj[0].clone()
     start[2] = 0.0
     traj = traj - start
+
+    if bias is not None:
+        traj[:, 0] += bias[0]
+        traj[:, 1] += bias[1]
+        traj[:, 2] += bias[2]
 
     if plot:
         plt.figure(figsize=(4, 4))
@@ -2000,6 +2005,24 @@ def plot_one_loop(traj_loop, title="Steady loop (one cycle)"):
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+
+class FirstOrderActuator:
+    def __init__(self, dim=3, tau=0.08, dt=0.025, init=None):
+        self.dim = dim
+        self.dt = dt
+        self.tau = tau
+        self.alpha = dt / (tau + dt)
+
+        if init is None:
+            self.x = np.zeros(dim, dtype=np.float32)
+        else:
+            self.x = np.array(init, dtype=np.float32).copy()
+
+    def update(self, u):
+        u = np.asarray(u, dtype=np.float32)
+        self.x = self.x + self.alpha * (u - self.x)
+        return self.x.copy()
 
 
 if __name__ == "__main__":

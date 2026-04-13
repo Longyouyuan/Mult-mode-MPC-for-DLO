@@ -148,9 +148,13 @@
 
   <actuator>
 <!--    <motor site="S_last" gear="0 0 0 1 0 0" ctrlrange="-.3 .3"/>-->
-    <position joint="ctr_x" kp="5000" kv="50" />  <!-- kp="10000" kv="10" />-->
-    <position joint="ctr_y" kp="5000" kv="50" />
-    <position joint="ctr_z" kp="50000" kv="500" />
+<!--    <position joint="ctr_x" kp="5000" kv="50" />  &lt;!&ndash; kp="10000" kv="10" />&ndash;&gt;-->
+<!--    <position joint="ctr_y" kp="5000" kv="50" />-->
+<!--    <position joint="ctr_z" kp="50000" kv="500" />-->
+
+    <position joint="ctr_x" kp="1200" kv="50" />
+    <position joint="ctr_y" kp="1200" kv="50" />
+    <position joint="ctr_z" kp="400" kv="20" />
   </actuator>
 
   <keyframe>

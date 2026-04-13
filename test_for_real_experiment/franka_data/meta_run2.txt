@@ -1,0 +1,13 @@
+collection_time_sec=1200
+dt=0.001
+alpha=0
+num_rows=1200000
+overrun_count=121
+pos_min=0.33 -0.35 0.35
+pos_max=0.63 0.35 0.55
+vel_min=-0.3 -1 -0.3
+vel_max=0.3 1 0.3
+k_trans=1200 0 0 0 1200 0 0 0 400
+k_rot=50 0 0 0 50 0 0 0 50
+b_trans=96.9948 0 0 0 48.4974 0 0 0 28
+b_rot=9.89949 0 0 0 9.89949 0 0 0 9.89949

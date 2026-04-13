@@ -385,10 +385,10 @@ if __name__ == "__main__":
     # sampled_data = np.load('../data/static_init_with_xyz_drive.npy').astype(np.float32)
     position_data, velocity_data, control_sequence = mj_data_to_my_data(N, sampled_data, device)
 
-    ctr_period = 25
+    ctr_period = 1  # to compare with torch rope, make it 1
     record_interval = 25
     sim = WarpRope(
-        batch_size=400,
+        batch_size=1000,
         L=1.0,
         mass=0.0025 * 40 / N,
         k=10000 * 0.46,
@@ -397,7 +397,7 @@ if __name__ == "__main__":
         bending_damping=0.000401,
         air_drag=0.2206 / 1000,
         g=10.07,
-        max_record_steps=750,
+        max_record_steps=750,  # to compare with torch rope, make sure this is same with 10000
         record_interval=record_interval,
         ctr_period=ctr_period,
         mode='vel',
@@ -412,7 +412,7 @@ if __name__ == "__main__":
     L = 1.0
     # plot_animation_3d(traj_warp, dt, record_interval, L, repeat=True, batch_idx=0)
 
-    model_compare = 0
+    model_compare = 1
     if model_compare:
         # === Parameters ===
         N = 20  # Number of segments
@@ -444,7 +444,7 @@ if __name__ == "__main__":
                 position_data[show_start:show_start + 1],
                 velocity_data[show_start:show_start + 1],
                 control_sequence[show_start:].unsqueeze(0),
-                steps=int(10000),
+                steps=int(750),
                 mode='vel',
                 record_interval=record_interval
             )
