@@ -496,7 +496,7 @@ if __name__ == "__main__":
     dt = 0.001
     L = 1.0
 
-    model_compare = 1
+    model_compare = 0
     if model_compare:
         # === Parameters ===
         N = 8
@@ -566,4 +566,4 @@ if __name__ == "__main__":
             traj_warp = sim.simulate(steps=steps)
         wp.synchronize()
         t1 = time.perf_counter()
-        print("Average time:", (t1 - t0) / n)
+        print("Average time(ms):", (t1 - t0) / n * 1000)

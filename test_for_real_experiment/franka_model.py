@@ -502,7 +502,7 @@ def parse_args():
     ap.add_argument("--val_ratio", type=float, default=0.15, help="训练CSV中用作验证集的比例（尾部切出）")
     ap.add_argument("--batch_size", type=int, default=256, help="batch大小（窗口数）")
     ap.add_argument("--epochs", type=int, default=50, help="训练轮数")
-    ap.add_argument("--lr", type=float, default=1e-3, help="学习率")
+    ap.add_argument("--lr", type=float, default=0.2e-3, help="学习率")
     ap.add_argument("--rollout_weight", type=float, default=1.0, help="rollout loss权重")
     ap.add_argument("--encoder_hidden", type=int, default=64, help="history encoder的GRU隐藏维度")
     ap.add_argument("--rollout_hidden", type=int, default=64, help="rollout GRUCell隐藏维度")
@@ -628,8 +628,8 @@ def main():
         ckpt = torch.load(best_ckpt, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model_state"])
         val_metrics = evaluate(model, val_loader, device, args.rollout_weight)
-        best_val = val_metrics["loss"]
-        print('Best val loss after loading ckpt: ', best_val)
+        best_val = val_metrics['avg_max_pos_err']
+        print('Best avg_max_pos_err after loading ckpt: ', best_val)
 
     for epoch in range(1, args.epochs + 1):
         train_metrics = train_one_epoch(model, train_loader, optimizer, device, args.rollout_weight)
@@ -644,8 +644,8 @@ def main():
             f"| avg_max_pos_err(train/val) {train_metrics['avg_max_pos_err']:.6f}/{val_metrics['avg_max_pos_err']:.6f}"
         )
 
-        if val_metrics["loss"] < best_val:
-            best_val = val_metrics["loss"]
+        if val_metrics["avg_max_pos_err"] < best_val:
+            best_val = val_metrics["avg_max_pos_err"]
             torch.save({
                 "model_state": model.state_dict(),
                 "args": vars(args),

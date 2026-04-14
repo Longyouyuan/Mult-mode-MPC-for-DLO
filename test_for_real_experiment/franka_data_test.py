@@ -73,7 +73,7 @@ def plot_position_comparison(t_s: np.ndarray, pos_act: np.ndarray, pos_int: np.n
 
 def main():
     parser = argparse.ArgumentParser(description="Integrate ee_vel from franka CSV and compare to actual ee_pos.")
-    parser.add_argument("--csv", type=str, default="franka_data/ee_collection_run1.csv", help="Path to ee_collection_run1.csv")
+    parser.add_argument("--csv", type=str, default="franka_data/ee_collection_run3.csv", help="Path to ee_collection_run1.csv")
     parser.add_argument("--out", type=str, default="franka_vel_integral_compare.png", help="Output plot path")
     parser.add_argument("--show", action="store_true", help="Show plot interactively")
     args = parser.parse_args()
