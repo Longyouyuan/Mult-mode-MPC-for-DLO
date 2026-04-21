@@ -1,8 +1,9 @@
 import argparse
+import glob
 import json
 import os
 import shutil
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +13,10 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 XYZ = ["x", "y", "z"]
+DEFAULT_REAL_DATA_EXTRA_GLOB = "./franka_data/real_data*.csv"
+DEFAULT_BASELINE_CKPT = "./franka_dynamic/best_model.pt"
+DEFAULT_FINETUNE_OUT_DIR = "./franka_dynamic_real_data_finetune"
+DEFAULT_RUN2_NAME = "ee_collection_run2.csv"
 
 
 def load_and_resample(csv_path: str, dt_ms: float = 1.0) -> Dict[str, np.ndarray]:
@@ -143,6 +148,40 @@ class FrankaSparseWindowDataset(Dataset):
             "target_p": torch.from_numpy(target_p),
             "target_v": torch.from_numpy(target_v),
         }
+
+
+class FrankaConcatDataset(Dataset):
+    def __init__(self, datasets: List[FrankaSparseWindowDataset]):
+        if not datasets:
+            raise ValueError("datasets must not be empty")
+        self.datasets = datasets
+        self.cumulative_sizes = np.cumsum([len(ds) for ds in datasets], dtype=np.int64)
+
+        first = datasets[0]
+        self.dt = float(first.dt)
+        self.horizon = int(first.horizon)
+        self.hist_len = int(first.hist_len)
+        self.hist_stride = int(first.hist_stride)
+        self.hist_offsets = first.hist_offsets.copy()
+
+        for ds in datasets[1:]:
+            if not np.isclose(float(ds.dt), self.dt):
+                raise ValueError("All datasets must share the same dt")
+            if ds.horizon != self.horizon or ds.hist_len != self.hist_len or ds.hist_stride != self.hist_stride:
+                raise ValueError("All datasets must share the same history/horizon settings")
+
+    def __len__(self):
+        return int(self.cumulative_sizes[-1])
+
+    def __getitem__(self, idx: int):
+        if idx < 0:
+            idx += len(self)
+        if idx < 0 or idx >= len(self):
+            raise IndexError("index out of range")
+
+        dataset_idx = int(np.searchsorted(self.cumulative_sizes, idx, side="right"))
+        sample_idx = idx if dataset_idx == 0 else idx - int(self.cumulative_sizes[dataset_idx - 1])
+        return self.datasets[dataset_idx][sample_idx]
 
 
 class ResidualMLP(nn.Module):
@@ -345,6 +384,223 @@ def clean_output_dir(path: str, keep: Tuple[str, ...] = ("best_model.pt",)):
             os.remove(full)
 
 
+def normalize_path(path: str) -> str:
+    return os.path.normcase(os.path.abspath(path))
+
+
+def is_run2_csv(path: str) -> bool:
+    return os.path.basename(path) == DEFAULT_RUN2_NAME
+
+
+def expand_csv_paths(entries: Optional[List[str]]) -> List[str]:
+    if entries is None:
+        return []
+
+    expanded = []
+    seen = set()
+    for entry in entries:
+        matches = sorted(glob.glob(entry))
+        if not matches:
+            matches = [entry]
+
+        for path in matches:
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"CSV file not found: {path}")
+
+            key = normalize_path(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            expanded.append(path)
+    return expanded
+
+
+def collect_train_csvs(
+    csv_train: List[str],
+    csv_train_extra: Optional[List[str]],
+    csv_train_extra_glob: Optional[str],
+) -> Tuple[List[str], List[str]]:
+    base_csvs = expand_csv_paths(csv_train)
+
+    extra_entries = [] if csv_train_extra is None else list(csv_train_extra)
+    if csv_train_extra_glob:
+        extra_entries.append(csv_train_extra_glob)
+    extra_csvs = expand_csv_paths(extra_entries)
+
+    base_keys = {normalize_path(path) for path in base_csvs}
+    extra_csvs = [path for path in extra_csvs if normalize_path(path) not in base_keys]
+    return base_csvs, extra_csvs
+
+
+def trim_resampled_data(data: Dict[str, np.ndarray], keep_len: int) -> Dict[str, np.ndarray]:
+    trimmed = {}
+    for key, value in data.items():
+        if key in {"t_s", "goal_p", "goal_v", "ee_p", "ee_v"}:
+            trimmed[key] = value[:keep_len]
+        else:
+            trimmed[key] = value
+    trimmed["resampled_len"] = np.int64(keep_len)
+    return trimmed
+
+
+def build_train_val_datasets(
+    csv_paths: List[str],
+    dt_ms: float,
+    hist_len: int,
+    hist_stride: int,
+    horizon: int,
+    stride: int,
+    val_ratio: float,
+    train_repeat_by_csv: Dict[str, int],
+    source_role_by_csv: Dict[str, str],
+    train_only_by_csv: Dict[str, bool],
+    keep_ratio_by_csv: Dict[str, float],
+) -> Tuple[Dataset, Dataset, List[Dict[str, object]], float]:
+    train_parts = []
+    val_parts = []
+    source_summaries = []
+    reference_dt = None
+    min_total_len = int(make_sparse_offsets(hist_len, hist_stride)[0]) + int(horizon) + 2
+
+    for csv_path in csv_paths:
+        print(f"Loading train CSV: {csv_path}")
+        data = load_and_resample(csv_path, dt_ms=dt_ms)
+        original_resampled_len = int(data["resampled_len"])
+        keep_ratio = float(keep_ratio_by_csv.get(normalize_path(csv_path), 1.0))
+        if keep_ratio <= 0.0 or keep_ratio > 1.0:
+            raise ValueError(f"keep ratio must be in (0, 1], got {keep_ratio} for {csv_path}")
+
+        if keep_ratio < 1.0:
+            keep_len = max(min_total_len, int(original_resampled_len * keep_ratio))
+            keep_len = min(keep_len, original_resampled_len)
+            if keep_len < original_resampled_len:
+                data = trim_resampled_data(data, keep_len)
+                print(
+                    f"  keeping first {keep_len}/{original_resampled_len} resampled steps "
+                    f"({keep_len / original_resampled_len:.2%})"
+                )
+
+        data_dt = float(data["dt"])
+        if reference_dt is None:
+            reference_dt = data_dt
+        elif not np.isclose(data_dt, reference_dt):
+            raise ValueError("All training CSVs must share the same resampled dt")
+
+        train_only = bool(train_only_by_csv.get(normalize_path(csv_path), False))
+        total_len = len(data["t_s"])
+
+        if train_only:
+            splits = {
+                "train": (0, total_len),
+                "val": (total_len, total_len),
+            }
+            train_ds = FrankaSparseWindowDataset(
+                data,
+                splits["train"],
+                hist_len,
+                hist_stride,
+                horizon,
+                stride,
+            )
+            val_ds = None
+            val_count = 0
+            print(
+                f"  using full sequence for training only: {csv_path}"
+            )
+        else:
+            splits = split_train_val(total_len, val_ratio)
+            train_ds = FrankaSparseWindowDataset(
+                data,
+                splits["train"],
+                hist_len,
+                hist_stride,
+                horizon,
+                stride,
+            )
+
+            val_ds = None
+            try:
+                val_ds = FrankaSparseWindowDataset(
+                    data,
+                    splits["val"],
+                    hist_len,
+                    hist_stride,
+                    horizon,
+                    stride,
+                )
+                val_count = len(val_ds)
+            except ValueError:
+                val_count = 0
+                print(
+                    f"  validation split skipped for {csv_path} because it is too short for the selected history/horizon."
+                )
+
+        repeat = max(1, int(train_repeat_by_csv.get(normalize_path(csv_path), 1)))
+        for _ in range(repeat):
+            train_parts.append(train_ds)
+        if val_ds is not None:
+            val_parts.append(val_ds)
+
+        source_summary = {
+            "name": os.path.splitext(os.path.basename(csv_path))[0],
+            "path": csv_path,
+            "role": source_role_by_csv.get(normalize_path(csv_path), "base"),
+            "raw_len": int(data["raw_len"]),
+            "resampled_len": int(data["resampled_len"]),
+            "original_resampled_len": original_resampled_len,
+            "keep_ratio": keep_ratio,
+            "train_repeat": repeat,
+            "train_only": train_only,
+            "train_samples": len(train_ds),
+            "val_samples": val_count,
+            "val_skipped": val_ds is None,
+            "splits": {k: [int(v[0]), int(v[1])] for k, v in splits.items()},
+        }
+        source_summaries.append(source_summary)
+        print(
+            f"  train samples: {len(train_ds)}, val samples: {val_count}, repeat: {repeat}, role: {source_summary['role']}, train_only: {train_only}"
+        )
+
+    if not train_parts:
+        raise ValueError("No training datasets were built")
+    if not val_parts:
+        raise ValueError("No validation datasets were built. Reduce horizon/hist_len or provide longer CSVs.")
+
+    train_ds = train_parts[0] if len(train_parts) == 1 else FrankaConcatDataset(train_parts)
+    val_ds = val_parts[0] if len(val_parts) == 1 else FrankaConcatDataset(val_parts)
+    return train_ds, val_ds, source_summaries, float(reference_dt)
+
+
+def filter_test_csvs(csv_test: Optional[List[str]], train_csvs: List[str]) -> List[str]:
+    train_keys = {normalize_path(path) for path in train_csvs}
+    filtered = []
+    for csv_path in expand_csv_paths(csv_test):
+        if normalize_path(csv_path) in train_keys:
+            print(f"Skipping test CSV also used for training: {csv_path}")
+            continue
+        filtered.append(csv_path)
+    return filtered
+
+
+def get_reference_dataset(dataset: Dataset) -> FrankaSparseWindowDataset:
+    if isinstance(dataset, FrankaConcatDataset):
+        return dataset.datasets[0]
+    return dataset
+
+
+def save_checkpoint(path: str, model: SparseGRUFrankaModel, args, dt: float, train_csvs: List[str], test_csvs: List[str]):
+    torch.save(
+        {
+            "model_state": model.state_dict(),
+            "args": vars(args),
+            "dt": dt,
+            "train_csvs": train_csvs,
+            "test_csvs": test_csvs,
+        },
+        path,
+    )
+
+
 def sample_rollout_indices(dataset_len: int, num_samples: int, seed: int) -> np.ndarray:
     if dataset_len <= 0:
         raise ValueError("Dataset is empty, cannot visualize rollouts.")
@@ -487,26 +743,38 @@ def save_training_curve(history, out_path: str):
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--csv_train", type=str, default="./franka_data/ee_collection_run2.csv",
-                     help="训练用CSV（大数据集），按 val_ratio 切分出 train/val")
+    ap.add_argument("--csv_train", type=str, nargs="+", default=["./franka_data/ee_collection_run2.csv"],
+                     help="基础训练CSV，可多个；每个CSV都会各自切分 train/val")
+    ap.add_argument("--base_train_keep_ratio", type=float, default=0.5,
+                     help="ee_collection_run2.csv 保留比例，默认0.5；1.0表示全部使用")
+    ap.add_argument("--csv_train_extra", type=str, nargs="+", default=None,
+                     help="增量/DAgger训练CSV，可多个；未显式指定额外数据时会自动加载 real_data*.csv，且默认整段只用于训练")
+    ap.add_argument("--csv_train_extra_glob", type=str, default=None,
+                     help="增量/DAgger训练CSV通配符，例如 ./franka_data/real_data*.csv；若不显式指定，脚本会自动尝试加载该模式")
     ap.add_argument("--csv_test", type=str, nargs="+",
                      default=["./franka_data/ee_collection_run1.csv",
                               "./franka_data/ee_collection_run3.csv"],
-                     help="测试用CSV（可多个，跨session泛化评估）")
-    ap.add_argument("--out_dir", type=str, default="./franka_dynamic", help="输出目录（模型、曲线、rollout结果）")
+                     help="测试用CSV（可多个或glob）；会自动跳过已经用于训练的CSV")
+    ap.add_argument("--out_dir", type=str, default="./franka_dynamic/finetune_real_data",
+                     help="输出目录（模型、曲线、rollout结果）；默认写到单独的real_data微调目录")
     ap.add_argument("--dt_ms", type=float, default=1.0, help="重采样时间间隔（ms），建议1.0")
-    ap.add_argument("--hist_len", type=int, default=31, help="稀疏历史点个数，实际和目标共用同一个长度")
+    ap.add_argument("--hist_len", type=int, default=1, help="稀疏历史点个数，实际和目标共用同一个长度")
     ap.add_argument("--hist_stride", type=int, default=10, help="历史采样间隔（step）；5表示每隔5ms取一个点")
     ap.add_argument("--horizon", type=int, default=750, help="rollout长度（step），100=100ms")
     ap.add_argument("--stride", type=int, default=20, help="滑窗步长，越小样本越多（推荐10~20）")
     ap.add_argument("--val_ratio", type=float, default=0.15, help="训练CSV中用作验证集的比例（尾部切出）")
-    ap.add_argument("--batch_size", type=int, default=256, help="batch大小（窗口数）")
-    ap.add_argument("--epochs", type=int, default=50, help="训练轮数")
-    ap.add_argument("--lr", type=float, default=0.2e-3, help="学习率")
+    ap.add_argument("--batch_size", type=int, default=128, help="batch大小（窗口数）")
+    ap.add_argument("--epochs", type=int, default=15, help="训练轮数")
+    ap.add_argument("--lr", type=float, default=5e-4, help="学习率")
     ap.add_argument("--rollout_weight", type=float, default=1.0, help="rollout loss权重")
     ap.add_argument("--encoder_hidden", type=int, default=64, help="history encoder的GRU隐藏维度")
     ap.add_argument("--rollout_hidden", type=int, default=64, help="rollout GRUCell隐藏维度")
     ap.add_argument("--residual_hidden", type=int, default=64, help="residual MLP隐藏维度")
+    ap.add_argument("--init_ckpt", type=str, default=None,
+                     help="从已有checkpoint继续训练；默认先尝试 out_dir/best_model.pt，再尝试 ./franka_dynamic/best_model.pt")
+    ap.add_argument("--real_data_repeat", type=int, default=32, help="增量真实数据训练集重复次数，>1 可提高其训练权重")
+    ap.add_argument("--split_extra_val", action="store_true", help="对增量真实数据也执行 train/val 切分；默认不切，全部用于训练")
+    ap.add_argument("--reset_best", action="store_true", help="加载checkpoint后重新开始统计best模型")
     ap.add_argument("--seed", type=int, default=0, help="随机种子")
     return ap.parse_args()
 
@@ -583,18 +851,57 @@ def main():
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    # --- Load training CSV (run2) and split into train/val ---
-    print(f"Loading train CSV: {args.csv_train}")
-    train_data = load_and_resample(args.csv_train, dt_ms=args.dt_ms)
-    tv_splits = split_train_val(len(train_data["t_s"]), args.val_ratio)
+    if args.csv_train_extra is None and args.csv_train_extra_glob is None:
+        auto_extra_matches = sorted(glob.glob(DEFAULT_REAL_DATA_EXTRA_GLOB))
+        if auto_extra_matches:
+            args.csv_train_extra_glob = DEFAULT_REAL_DATA_EXTRA_GLOB
+            print(f"Auto-loading extra training CSVs from: {args.csv_train_extra_glob}")
 
-    train_ds = FrankaSparseWindowDataset(train_data, tv_splits["train"], args.hist_len, args.hist_stride, args.horizon, args.stride)
-    val_ds = FrankaSparseWindowDataset(train_data, tv_splits["val"], args.hist_len, args.hist_stride, args.horizon, args.stride)
+    base_train_csvs, extra_train_csvs = collect_train_csvs(
+        args.csv_train,
+        args.csv_train_extra,
+        args.csv_train_extra_glob,
+    )
+    all_train_csvs = base_train_csvs + extra_train_csvs
+    if not all_train_csvs:
+        raise ValueError("No training CSVs provided")
 
-    print(f"  train samples: {len(train_ds)}, val samples: {len(val_ds)}")
+    print("Training CSVs:")
+    for csv_path in base_train_csvs:
+        print(f"  [base] {csv_path}")
+    for csv_path in extra_train_csvs:
+        print(f"  [extra] {csv_path}")
+
+    train_repeat_by_csv = {normalize_path(path): 1 for path in all_train_csvs}
+    source_role_by_csv = {normalize_path(path): "base" for path in base_train_csvs}
+    train_only_by_csv = {normalize_path(path): False for path in all_train_csvs}
+    keep_ratio_by_csv = {normalize_path(path): 1.0 for path in all_train_csvs}
+    for path in base_train_csvs:
+        if is_run2_csv(path):
+            keep_ratio_by_csv[normalize_path(path)] = args.base_train_keep_ratio
+    for path in extra_train_csvs:
+        train_repeat_by_csv[normalize_path(path)] = max(1, args.real_data_repeat)
+        source_role_by_csv[normalize_path(path)] = "extra"
+        train_only_by_csv[normalize_path(path)] = not args.split_extra_val
+
+    train_ds, val_ds, train_source_summaries, train_dt = build_train_val_datasets(
+        all_train_csvs,
+        dt_ms=args.dt_ms,
+        hist_len=args.hist_len,
+        hist_stride=args.hist_stride,
+        horizon=args.horizon,
+        stride=args.stride,
+        val_ratio=args.val_ratio,
+        train_repeat_by_csv=train_repeat_by_csv,
+        source_role_by_csv=source_role_by_csv,
+        train_only_by_csv=train_only_by_csv,
+        keep_ratio_by_csv=keep_ratio_by_csv,
+    )
+    print(f"Combined train samples: {len(train_ds)}, val samples: {len(val_ds)}")
 
     # --- Load test CSVs (run1, run3, ...) ---
     test_datasets = {}  # name -> (data_dict, dataset)
+    args.csv_test = filter_test_csvs(args.csv_test, all_train_csvs)
     for csv_path in args.csv_test:
         name = os.path.splitext(os.path.basename(csv_path))[0]  # e.g. "ee_collection_run1"
         print(f"Loading test CSV: {csv_path} -> {name}")
@@ -609,7 +916,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SparseGRUFrankaModel(
         hist_len=args.hist_len,
-        dt=float(train_data["dt"]),
+        dt=train_dt,
         encoder_hidden=args.encoder_hidden,
         rollout_hidden=args.rollout_hidden,
         residual_hidden=args.residual_hidden,
@@ -622,14 +929,28 @@ def main():
     history = {"train_loss": [], "val_loss": []}
     best_val = float("inf")
 
-    # load model from here if you need
-    if os.path.exists(best_ckpt):
-        print(f"Loading checkpoint from: {best_ckpt}")
-        ckpt = torch.load(best_ckpt, map_location=device, weights_only=False)
+    load_ckpt_path = None
+    if args.init_ckpt is not None:
+        load_ckpt_path = args.init_ckpt
+    elif os.path.exists(best_ckpt):
+        load_ckpt_path = best_ckpt
+    elif os.path.exists(DEFAULT_BASELINE_CKPT):
+        load_ckpt_path = DEFAULT_BASELINE_CKPT
+
+    if load_ckpt_path is not None:
+        print(f"Loading checkpoint from: {load_ckpt_path}")
+        ckpt = torch.load(load_ckpt_path, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model_state"])
-        val_metrics = evaluate(model, val_loader, device, args.rollout_weight)
-        best_val = val_metrics['avg_max_pos_err']
-        print('Best avg_max_pos_err after loading ckpt: ', best_val)
+        if not os.path.exists(best_ckpt) or normalize_path(load_ckpt_path) != normalize_path(best_ckpt):
+            save_checkpoint(best_ckpt, model, args, train_dt, all_train_csvs, args.csv_test)
+
+        # if not args.reset_best:
+        #     val_metrics = evaluate(model, val_loader, device, args.rollout_weight)
+        #     best_val = val_metrics["avg_max_pos_err"]
+        #     print("Best val avg_max_pos_err after loading ckpt:", best_val)
+
+    if load_ckpt_path is None and args.epochs <= 0:
+        raise ValueError("epochs must be > 0 when no init_ckpt or existing out_dir/best_model.pt is available")
 
     for epoch in range(1, args.epochs + 1):
         train_metrics = train_one_epoch(model, train_loader, optimizer, device, args.rollout_weight)
@@ -644,13 +965,9 @@ def main():
             f"| avg_max_pos_err(train/val) {train_metrics['avg_max_pos_err']:.6f}/{val_metrics['avg_max_pos_err']:.6f}"
         )
 
-        if val_metrics["avg_max_pos_err"] < best_val:
-            best_val = val_metrics["avg_max_pos_err"]
-            torch.save({
-                "model_state": model.state_dict(),
-                "args": vars(args),
-                "dt": train_data["dt"],
-            }, best_ckpt)
+        if train_metrics["avg_max_pos_err"] < best_val:
+            best_val = train_metrics["avg_max_pos_err"]
+            save_checkpoint(best_ckpt, model, args, train_dt, all_train_csvs, args.csv_test)
 
     ckpt = torch.load(best_ckpt, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model_state"])
@@ -691,22 +1008,29 @@ def main():
         all_test_plots[name] = t_plot
 
     # --- Probe model summary ---
-    first_test_name = next(iter(test_datasets))
-    probe_ds = test_datasets[first_test_name][1]
+    probe_ds = val_ds
     probe_sample = probe_ds[len(probe_ds) // 2]
     probe_batch = {k: v.unsqueeze(0).to(device) for k, v in probe_sample.items()}
     model_summary = summarize_model(model, probe_batch)
 
+    ref_ds = get_reference_dataset(train_ds)
+    train_raw_len_total = sum(item["raw_len"] for item in train_source_summaries)
+    train_resampled_len_total = sum(item["resampled_len"] for item in train_source_summaries)
+
     # --- Build summary ---
     summary = {
-        "csv_train": args.csv_train,
+        "csv_train_base": base_train_csvs,
+        "csv_train_extra": extra_train_csvs,
+        "csv_train_all": all_train_csvs,
         "csv_test": args.csv_test,
         "train_data": {
-            "raw_len": int(train_data["raw_len"]),
-            "resampled_len": int(train_data["resampled_len"]),
+            "num_sources": len(train_source_summaries),
+            "raw_len_total": int(train_raw_len_total),
+            "resampled_len_total": int(train_resampled_len_total),
         },
-        "dt": float(train_data["dt"]),
-        "splits": {k: [int(v[0]), int(v[1])] for k, v in tv_splits.items()},
+        "train_sources": train_source_summaries,
+        "dt": float(train_dt),
+        "splits": {item["name"]: item["splits"] for item in train_source_summaries},
         "dataset_sizes": {
             "train": len(train_ds),
             "val": len(val_ds),
@@ -715,7 +1039,7 @@ def main():
         "history": {
             "hist_len": args.hist_len,
             "hist_stride": args.hist_stride,
-            "hist_offsets_steps": train_ds.hist_offsets.tolist(),
+            "hist_offsets_steps": ref_ds.hist_offsets.tolist(),
         },
         "train_metrics": train_metrics,
         "val_metrics": val_metrics,
@@ -730,15 +1054,18 @@ def main():
     with open(os.path.join(args.out_dir, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
-    test_csv_str = ", ".join(args.csv_test)
+    base_csv_str = ", ".join(base_train_csvs)
+    extra_csv_str = ", ".join(extra_train_csvs) if extra_train_csvs else "none"
+    test_csv_str = ", ".join(args.csv_test) if args.csv_test else "none"
     test_dirs_str = "\n".join(
         f"- test_rollout_{name}/: 20 rollout plots" for name in test_datasets
-    )
+    ) if test_datasets else "- no test rollout generated"
     with open(os.path.join(args.out_dir, "README.txt"), "w", encoding="utf-8") as f:
         f.write(
             "Franka sparse-history GRU lag model training outputs\n"
             "===============================================\n\n"
-            f"csv_train: {args.csv_train}\n"
+            f"csv_train_base: {base_csv_str}\n"
+            f"csv_train_extra: {extra_csv_str}\n"
             f"csv_test: {test_csv_str}\n"
             f"dt_ms: {args.dt_ms}\n"
             f"hist_len: {args.hist_len}\n"
@@ -746,7 +1073,11 @@ def main():
             f"horizon: {args.horizon}\n"
             f"stride: {args.stride}\n"
             f"val_ratio: {args.val_ratio}\n"
+            f"base_train_keep_ratio: {args.base_train_keep_ratio}\n"
             f"epochs: {args.epochs}\n"
+            f"init_ckpt: {args.init_ckpt}\n"
+            f"real_data_repeat: {args.real_data_repeat}\n"
+            f"split_extra_val: {args.split_extra_val}\n"
             f"encoder_hidden: {args.encoder_hidden}\n"
             f"rollout_hidden: {args.rollout_hidden}\n"
             f"residual_hidden: {args.residual_hidden}\n\n"
@@ -762,7 +1093,7 @@ def main():
     print(json.dumps(summary, indent=2))
 
     # Speed benchmark: batch=1, 0.75s rollout
-    benchmark_rollout_speed(model, val_ds, device, horizon=750, n_repeats=10)
+    benchmark_rollout_speed(model, probe_ds, device, horizon=min(args.horizon, 750), n_repeats=10)
 
 
 if __name__ == "__main__":

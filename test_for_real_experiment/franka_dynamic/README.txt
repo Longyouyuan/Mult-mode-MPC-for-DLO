@@ -9,7 +9,7 @@ hist_stride: 10
 horizon: 750
 stride: 20
 val_ratio: 0.15
-epochs: 50
+epochs: 0
 encoder_hidden: 64
 rollout_hidden: 64
 residual_hidden: 64

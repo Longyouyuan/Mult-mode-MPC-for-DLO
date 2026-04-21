@@ -122,7 +122,7 @@ class Planner:
         traj = self.rope.simulate(steps=self.horizon * self.ctr_period)  # (B,H,P,3)
 
         if full is False:
-            return traj[:, :, 0, :]  # (B,H,3) 只取末端  # careful about here
+            return traj[:, :, -1, :]  # (B,H,3) 只取末端  # careful about here
         else:
             return traj  # (B,H,P,3) 所有
 

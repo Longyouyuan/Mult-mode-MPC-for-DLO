@@ -592,7 +592,7 @@ if __name__ == "__main__":
 
     sim = WarpRopeFranka(
         franka_runner=franka_runner,
-        batch_size=8,
+        batch_size=31,
         L=0.8,
         segment_lengths=segment_lengths,
         mass=12.8 / 1000 / N,

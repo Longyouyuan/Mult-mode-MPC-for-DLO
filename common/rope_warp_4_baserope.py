@@ -2,7 +2,7 @@ import time
 import numpy as np
 import torch
 import warp as wp
-from rope_real import *
+from common.rope_real import *
 
 wp.init()
 

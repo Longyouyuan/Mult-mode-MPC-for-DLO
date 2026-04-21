@@ -4,7 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 
 
-file_path = draw_traj_xy()
+file_path = draw_traj_xy(xlim=(0.33, 0.63), ylim=(-0.35, 0.35))
 
 # file_path = 'SpongeBob.npy'
 
