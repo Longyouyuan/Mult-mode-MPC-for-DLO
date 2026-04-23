@@ -60,7 +60,7 @@ top_k_good = 200
 beta = 5.0
 wJ = 0.0
 
-visualization = False
+visualization = True
 
 # === Setup device ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Comment this out
@@ -103,7 +103,7 @@ rope = WarpRope(
 # === 2. Draw Traj ===
 
 Goal_traj = build_goal_traj_from_drawn(
-    drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
+    drawn_path="../my_trajs/PatrickStar.npy",  # SpongeBob flower PatrickStar
     total_horizon=total_horizon-last_point_repeat,
     device=device,
     z0=0.2,

@@ -648,52 +648,45 @@ def save_rollout_plot(model, dataset, device, out_dir: str, title: str, num_samp
         goal_p = batch["goal_p_future"][0].cpu().numpy()
         goal_v = batch["goal_v_future"][0].cpu().numpy()
 
-        dt = dataset.dt
-        integrated_p = np.zeros_like(tgt_p)
-        integrated_p[0] = tgt_p[0]
-        for k in range(1, len(tgt_v)):
-            integrated_p[k] = integrated_p[k - 1] + dt * tgt_v[k]
-
         pos_err_norm = np.linalg.norm(pred_p - tgt_p, axis=1)
         vel_err_norm = np.linalg.norm(pred_v - tgt_v, axis=1)
         max_pos_err = float(np.max(pos_err_norm))
         max_vel_err = float(np.max(vel_err_norm))
 
         t = np.arange(dataset.horizon) * dataset.dt
-        fig, axs = plt.subplots(4, 2, figsize=(14, 13), sharex=True)
+        fig, axs = plt.subplots(4, 2, figsize=(15, 13), sharex=True)
         labels = ["x", "y", "z"]
 
         for i, label in enumerate(labels):
             ax_pos = axs[i, 0]
             ax_vel = axs[i, 1]
 
-            ax_pos.plot(t, tgt_p[:, i], label="ee_pos_true")
-            ax_pos.plot(t, pred_p[:, i], label="ee_pos_pred")
-            ax_pos.plot(t, integrated_p[:, i], label="ee_pos_integrated", linestyle="--", alpha=0.7)
-            ax_pos.plot(t, goal_p[:, i], label="goal_pos", alpha=0.7)
+            ax_pos.plot(t, tgt_p[:, i], label="ee_pos_true", color="black", lw=3)
+            ax_pos.plot(t, pred_p[:, i], label="ee_pos_pred", color="red", lw=3, linestyle="--")
+            ax_pos.plot(t, goal_p[:, i], label="goal_pos", color="tab:blue", lw=3, alpha=1)
             ax_pos.set_title(f"Position {label}")
             ax_pos.set_xlabel("time [s]")
             ax_pos.set_ylabel("m")
             ax_pos.grid(True)
             ax_pos.legend()
 
-            ax_vel.plot(t, tgt_v[:, i], label="ee_vel_true")
-            ax_vel.plot(t, pred_v[:, i], label="ee_vel_pred")
-            ax_vel.plot(t, goal_v[:, i], label="goal_vel", alpha=0.7)
+            ax_vel.plot(t, tgt_v[:, i], label="ee_vel_true", color="black", lw=3)
+            ax_vel.plot(t, pred_v[:, i], label="ee_vel_pred", color="red", lw=3, linestyle="--")
+            ax_vel.plot(t, goal_v[:, i], label="goal_vel", color="tab:blue", lw=3, alpha=1)
             ax_vel.set_title(f"Velocity {label}")
             ax_vel.set_xlabel("time [s]")
             ax_vel.set_ylabel("m/s")
             ax_vel.grid(True)
             ax_vel.legend()
 
-        axs[3, 0].plot(t, pos_err_norm, label="|pos_error|_2", color="tab:red")
+        axs[3, 0].plot(t, pos_err_norm, label="|pos_error|_2", color="crimson", lw=2)
         axs[3, 0].set_title(f"Position 2-norm error | max={max_pos_err:.6f} m")
         axs[3, 0].set_xlabel("time [s]")
         axs[3, 0].set_ylabel("m")
         axs[3, 0].grid(True)
         axs[3, 0].legend()
 
-        axs[3, 1].plot(t, vel_err_norm, label="|vel_error|_2", color="tab:orange")
+        axs[3, 1].plot(t, vel_err_norm, label="|vel_error|_2", color="darkorange", lw=2)
         axs[3, 1].set_title(f"Velocity 2-norm error | max={max_vel_err:.6f} m/s")
         axs[3, 1].set_xlabel("time [s]")
         axs[3, 1].set_ylabel("m/s")
@@ -764,7 +757,7 @@ def parse_args():
     ap.add_argument("--stride", type=int, default=20, help="滑窗步长，越小样本越多（推荐10~20）")
     ap.add_argument("--val_ratio", type=float, default=0.15, help="训练CSV中用作验证集的比例（尾部切出）")
     ap.add_argument("--batch_size", type=int, default=128, help="batch大小（窗口数）")
-    ap.add_argument("--epochs", type=int, default=15, help="训练轮数")
+    ap.add_argument("--epochs", type=int, default=0, help="训练轮数")
     ap.add_argument("--lr", type=float, default=5e-4, help="学习率")
     ap.add_argument("--rollout_weight", type=float, default=1.0, help="rollout loss权重")
     ap.add_argument("--encoder_hidden", type=int, default=64, help="history encoder的GRU隐藏维度")

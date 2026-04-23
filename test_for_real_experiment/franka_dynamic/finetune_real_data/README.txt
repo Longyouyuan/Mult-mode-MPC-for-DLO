@@ -11,7 +11,7 @@ horizon: 750
 stride: 20
 val_ratio: 0.15
 base_train_keep_ratio: 0.5
-epochs: 15
+epochs: 0
 init_ckpt: None
 real_data_repeat: 32
 split_extra_val: False
