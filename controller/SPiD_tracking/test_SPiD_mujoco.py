@@ -160,9 +160,9 @@ points = half_dense_then_uniform(
     mode='exp', interval=(0.0, 2.0), plot=False
 )
 
-Goal_traj = eight_traj(points, scale_x=0.45 * 2.0, scale_y=0.65 * 2.0, z0=0.2, loops=1, plot=True, device=device)
+# Goal_traj = eight_traj(points, scale_x=0.45 * 2.0, scale_y=0.65 * 2.0, z0=0.2, loops=1, plot=True, device=device)
 # Goal_traj = egg_traj(points, scale_x=0.38 * 2.0, scale_y=0.52 * 2.0, plot=False, device=device)
-# Goal_traj = sin_traj(points, width=0.45 * 2.0, plot=False, device=device)
+Goal_traj = sin_traj(points, width=0.45 * 2.0, plot=False, device=device)
 # Goal_traj = torch.vstack((torch.sin(4 * points) * 0.25, points,
 #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
 plot_goal_traj(Goal_traj, T_task)

@@ -350,13 +350,6 @@ sampled_data_all.append(sampled_data[::10])
 
 sampled_data_all.append(np.load('../../data/DAgger_01.npy').astype(np.float32))
 
-sampled_data_all.append(np.load('../../data/DAgger_02.npy').astype(np.float32))
-
-sampled_data_all.append(np.load('../../data/DAgger_03.npy').astype(np.float32))
-
-sampled_data_all.append(np.load('../../data/DAgger_04.npy').astype(np.float32))
-
-sampled_data_all.append(np.load('../../data/DAgger_05.npy').astype(np.float32))
 
 sampled_data = np.vstack(sampled_data_all)
 
