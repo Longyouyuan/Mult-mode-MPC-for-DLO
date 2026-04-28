@@ -2,7 +2,7 @@ import mujoco.viewer as viewer
 import time
 from Mujoco_env.mj_utils import *
 from common.utils import *
-from DBSCAN_MPC_torch import Planner, cost_fn
+from DBSCAN_MPC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
 import warnings
 
@@ -151,7 +151,7 @@ horizon = 35
 
 # ===== DBSCAN-MPC 参数 =====
 n_sample = 402 * 1   # rollout batch = 1 + n_sample
-n_improve = 10
+n_improve = 1
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
@@ -159,7 +159,7 @@ total_horizon = int(total_steps / ctr_period)
 
 # DBSCAN 超参
 top_k_good = 200 * 3     # 保持原来的 good pool 规模；DBSCAN 会先 top-k，再过滤碰撞
-dbscan_eps = 6.0         # 若 cluster 太少/全 noise，可增大；若全部合成一类，可减小
+dbscan_eps = 5.0         # 若 cluster 太少/全 noise，可增大；若全部合成一类，可减小
 dbscan_min_samples = 5
 collision_thr = 1e5
 normalize_dbscan_feat = True
@@ -327,9 +327,9 @@ with viewer.launch_passive(model, data) as viewer:
         t0 = time.perf_counter()
         planner.improve_policy(pos, vel, goal, Obs=Obs_info)
 
-        labels = planner.last_dbscan_labels
-        num_clusters = 0 if labels is None else int(torch.unique(labels[labels >= 0]).numel())
-        print(f"step={i}, num_clusters={num_clusters}")
+        # labels = planner.last_dbscan_labels
+        # num_clusters = 0 if labels is None else int(torch.unique(labels[labels >= 0]).numel())
+        # print(f"step={i}, num_clusters={num_clusters}")
 
         if torch.isinf(planner.J_star).any().item():
             print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")

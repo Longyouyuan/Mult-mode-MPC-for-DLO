@@ -2,13 +2,13 @@ import mujoco.viewer as viewer
 import time
 from Mujoco_env.mj_utils import *
 from common.utils import *
-from M2PC import Planner, cost_fn
+from SVMPC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
 import warnings
 
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path('../../Mujoco_env/cable_show.xml')
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -43,21 +43,33 @@ mode = 'acc'  # 或 'vel'
 ctr_period = 25  # 1000/ctr_period Hz
 horizon = 35
 
-# ===== 多模态参数 =====
+# ===== SV-MPC particle / sampling 参数 =====
 n_sample = 402 * 1
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 1
+n_improve = 2
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
-# diversity 超参
+# diversity 超参（SVMPC 中仅为兼容 M2PC 接口；实际不参与 SVGD）
 top_k_good = 200 * 3
 beta = 1.0
 wJ = 1.5
+
+# ===================== SV-MPC hyperparameters =====================
+# m_modes 在 SVMPC 中表示 Stein particles 数量
+# n_sample 是所有 particles 周围的总 Monte-Carlo rollout 数，要求 n_sample % m_modes == 0
+alpha = 5.0
+lambda_ = 1.0
+svgd_step_size = 1.0
+likelihood_type = 'EU'      # 'EU' or 'PLC'
+prior_weight = 0.0          # 建议默认 0，避免 particles 被 prior 拉塌
+update_prior_mean = False
+update_prior_cov = False
+use_weighted_average = False
 
 visualization = True
 
@@ -107,13 +119,36 @@ planner = Planner(
     rope, cost_fn, dt, ctr_period, horizon,
     n_sample, n_improve, noise_scale, action_dim,
     limits=limits, device=device, mode=mode,
-    m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ, standard_m2pc=True
+    m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ, standard_m2pc=True,
+    alpha=alpha, lambda_=lambda_, svgd_step_size=svgd_step_size,
+    likelihood_type=likelihood_type,
+    prior_weight=prior_weight,
+    update_prior_mean=update_prior_mean,
+    update_prior_cov=update_prior_cov,
+    use_weighted_average=use_weighted_average
 )
 
 # ===================== Init state =====================
 pos = torch.zeros((1, P, 3), device=device)
 pos[:, :, 2] = torch.linspace(1.2, 0.2, steps=P, device=device)
 vel = torch.zeros((1, P, 3), device=device)
+
+# ===================== Warm start SVMPC particles =====================
+# 保持 M2PC 风格：用目标轨迹差分初始化所有 particles，再给非主 particle 加一点扰动。
+# 注意这里用 dt * ctr_period 作为相邻 MPC knot 的时间间隔。
+Goal_init = eight_inf.get_range(start=0, length=horizon + 1)  # (horizon+1,3)
+vel_start = (Goal_init[1:] - Goal_init[:-1]) / (dt * ctr_period)
+vel_start = vel_start.to(device)
+
+planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
+if m_modes > 1:
+    planner.seeds[1:] += 0.10 * torch.randn_like(planner.seeds[1:])
+planner.prior_mean.copy_(planner.seeds)
+
+goal = eight_inf.get_range(start=1, length=horizon)
+planner.n_improve = max(n_improve * 5, n_improve)
+planner.improve_policy(pos, vel, goal)
+planner.n_improve = n_improve
 
 # # ===================== Warm up seeds =====================
 # # Use infinite-goal for the initial horizon, and correct time scale dt * ctr_period
@@ -190,7 +225,7 @@ with viewer.launch_passive(model, data) as viewer:
     traj_drawer = TrajDrawer(
         viewer, goal_traj=Goal_traj.cpu(),
         K=k_cand, H=horizon, m=m_modes,
-        draw_candidates=False, draw_modes=True
+        draw_candidates=True, draw_modes=True
     )
 
     task_t_start = time.perf_counter()
@@ -224,7 +259,13 @@ with viewer.launch_passive(model, data) as viewer:
         # visualization
         if visualization:
             cand_tip_traj, cand_cost, m_mode_trajs = planner.get_cand(k_cand=k_cand)
-            idx_end = traj_drawer.update(cand_tip_traj.cpu(), cand_cost.cpu(), m_mode_trajs.cpu(), offset=None)
+            if cand_tip_traj is not None:
+                idx_end = traj_drawer.update(
+                    cand_tip_traj.cpu(),
+                    cand_cost.cpu(),
+                    m_mode_trajs.cpu() if m_mode_trajs is not None else None,
+                    offset=None
+                )
 
         # ---- Execute chosen action in MuJoCo ----
         for j in range(ctr_period):
