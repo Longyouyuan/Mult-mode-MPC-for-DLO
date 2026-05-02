@@ -48,7 +48,7 @@ n_sample = 402 * 1
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 2
+n_improve = 1
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
@@ -76,7 +76,7 @@ visualization = True
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
-set_seed(0)
+set_seed(1)
 
 # ===================== Rope model instance =====================
 rope = WarpRope(
@@ -149,6 +149,7 @@ goal = eight_inf.get_range(start=1, length=horizon)
 planner.n_improve = max(n_improve * 5, n_improve)
 planner.improve_policy(pos, vel, goal)
 planner.n_improve = n_improve
+planner.reset_profile()
 
 # # ===================== Warm up seeds =====================
 # # Use infinite-goal for the initial horizon, and correct time scale dt * ctr_period
@@ -179,6 +180,7 @@ with viewer.launch_passive(model, data) as viewer:
     vel_history = []
     pos_history = []
     time_record = []
+    profile_records = []
 
     node = len(cable_body_indices) + 1
     mj_state = np.zeros((1, 1 + node * 6 + 3))
@@ -230,7 +232,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     task_t_start = time.perf_counter()
 
-    for i in range(total_horizon*2):
+    for i in range(total_horizon*2+40):
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
@@ -248,11 +250,17 @@ with viewer.launch_passive(model, data) as viewer:
         Obs_info[2, :] = data.xpos[cyl2_body].copy()
         # print("Obs1:", Obs_info[1, :], " Obs2:", Obs_info[2, :])
 
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
         t0 = time.perf_counter()
         planner.improve_policy(pos, vel, goal, Obs=Obs_info)
+        if planner.last_profile is not None:
+            profile_records.append(planner.last_profile.copy())
         if torch.isinf(planner.J_star).any().item():
             print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
         action = planner.get_action(rule='greedy').cpu().numpy()  # sample
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
         t1 = time.perf_counter()
         time_record.append(t1 - t0)
 
@@ -316,7 +324,27 @@ with viewer.launch_passive(model, data) as viewer:
         planner.update_policy()
 
 task_t_end = time.perf_counter()
-print("average time on inference: ", torch.tensor(time_record).mean(), "Desired time:", dt * ctr_period)
+def print_timing_stats(name, values):
+    if len(values) == 0:
+        print(f"{name}: no samples")
+        return
+    values_t = torch.as_tensor(values, dtype=torch.float64)
+    mean_s = values_t.mean().item()
+    var_s2 = values_t.var(unbiased=False).item()
+    print(f"{name}: mean={mean_s:.6f} s ({mean_s * 1000.0:.3f} ms), var={var_s2:.6e} s^2")
+
+
+print_timing_stats("time_record / outer improve_policy timing", time_record)
+for key, label in [
+    ("improve", "planner.improve_policy internal total"),
+    ("rollout", "rollout"),
+    ("cost", "cost"),
+    ("multimodal", "SVMPC multimodal / SVGD update"),
+    ("overhead", "profiled overhead"),
+]:
+    print_timing_stats(label, [record[key] for record in profile_records if key in record])
+
+print("Desired time:", dt * ctr_period)
 print("Task time:", T_task, "   Spent time:", task_t_end - task_t_start)
 
 # ===================== Post plots (keep your original logic) =====================

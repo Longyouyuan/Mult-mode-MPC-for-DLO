@@ -69,6 +69,21 @@ class Planner:
         self.last_tip_traj = None  # (B,H,3)
         self.last_cost = None      # (B,)
         self.traj_seeds = None # (m,H,3)
+        dev_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(":")[0]
+        self._profile_uses_cuda = bool(torch.cuda.is_available() and dev_type == "cuda")
+        self.last_profile = None
+        self.profile_history = []
+
+    def _sync_profile_timer(self):
+        if self._profile_uses_cuda:
+            torch.cuda.synchronize()
+
+    def reset_profile(self):
+        self.last_profile = None
+        self.profile_history.clear()
+
+    def get_profile_history(self):
+        return list(self.profile_history)
 
     # ------------------------------------------------------------
     @torch.no_grad()
@@ -187,44 +202,72 @@ class Planner:
         cost_g = cost_g_org[:valid_n]
         tip_traj_g = tip_traj_g_org[:valid_n]
 
-        feat = tip_traj_g.reshape(valid_n, -1)
-        dist2 = torch.cdist(feat, feat, p=2) ** 2           # (K,K)
+        feat = tip_traj_g.reshape(valid_n, -1)  # (K, H*3)
 
-        # init with minimum cost
+        # Lazy column computation: only compute distance to each selected point
+        # instead of the full (K,K) matrix. Saves ~300x FLOPs for small m.
         first = int(0)  # first = int(torch.argmin(cost_g).item())
         selected = [first]
 
-        div_sum = dist2[:, first].clone()
+        diff = feat - feat[first]              # (K, d)
+        div_sum = (diff * diff).sum(dim=1)     # (K,) squared distances to first point
 
         c_norm = minmax_norm(cost_g)
+        score = torch.empty(valid_n, device=feat.device, dtype=feat.dtype)
         while len(selected) < self.m:
             d_norm = minmax_norm(div_sum)
 
-            score = -self.wJ * c_norm + self.beta * d_norm
+            score.copy_(-self.wJ * c_norm + self.beta * d_norm)
             score[selected] = -1e18
 
             nxt = int(torch.argmax(score).item())
             selected.append(nxt)
-            div_sum += dist2[:, nxt]
+            diff = feat - feat[nxt]
+            div_sum = div_sum + (diff * diff).sum(dim=1)
 
         return torch.tensor(selected, device=self.device, dtype=torch.long)
 
     # ------------------------------------------------------------
     @torch.no_grad()
     def improve_policy(self, pos, vel, goal, Obs=None):
+        self._sync_profile_timer()
+        improve_t0 = time.perf_counter()
         goal = self._pad_goal_to_horizon(goal)  # (H,3)
+        rollout_time = 0.0
+        cost_time = 0.0
+        multimodal_time = 0.0
 
         for _ in range(self.n_improve):
             batch_ctr_parameter = self._build_candidates_full_horizon()  # (B,H,3)
 
             if Obs is None:
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 batch_traj = self.rollout(pos, vel, batch_ctr_parameter)     # (B,H,3)
+                self._sync_profile_timer()
+                rollout_time += time.perf_counter() - t0
+
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 cost = self.cost_fn(batch_traj, goal)                        # (B,)
+                self._sync_profile_timer()
+                cost_time += time.perf_counter() - t0
             else:
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 batch_traj = self.rollout(pos, vel, batch_ctr_parameter, full=True)  # (B,H,P，3)
+                self._sync_profile_timer()
+                rollout_time += time.perf_counter() - t0
+
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 cost = self.cost_fn(batch_traj, goal, Obs=Obs)
+                self._sync_profile_timer()
+                cost_time += time.perf_counter() - t0
                 batch_traj = batch_traj[:, :, -1, :]
 
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             if self.m == 1:
                 idx = int(cost.argmin().item())
                 if self.standard_m2pc:
@@ -251,14 +294,16 @@ class Planner:
 
                 traj_g = batch_traj[good_idx]              # (K,H,3)
                 cost_g = cost[good_idx]                    # (K,)
-                ctr_g = batch_ctr_parameter[good_idx]      # (K,H,3)
+                # ctr_g = batch_ctr_parameter[good_idx]      # (K,H,3)
 
                 # greedy select m modes
                 sel = self._greedy_select(cost_g, traj_g)  # (m,)
-                U_star = ctr_g[sel]                        # (m,H,3)
+                # U_star = batch_ctr_parameter[good_idx[sel]]                      # (m,H,3)
 
                 # update seeds
-                self.seeds.copy_(U_star)
+                self.seeds.copy_(batch_ctr_parameter[good_idx[sel]])
+            self._sync_profile_timer()
+            multimodal_time += time.perf_counter() - t0
 
         # cache for visualization: show the last sampling batch
         self.last_tip_traj = batch_traj.detach()
@@ -269,6 +314,18 @@ class Planner:
             self.traj_seeds = traj_g[sel]
             J_star = cost_g[sel]  # (m,)
             self.J_star.copy_(J_star)
+
+        self._sync_profile_timer()
+        improve_time = time.perf_counter() - improve_t0
+        profile = {
+            "improve": improve_time,
+            "rollout": rollout_time,
+            "cost": cost_time,
+            "multimodal": multimodal_time,
+            "overhead": improve_time - rollout_time - cost_time - multimodal_time,
+        }
+        self.last_profile = profile
+        self.profile_history.append(profile)
 
     # ------------------------------------------------------------
     @torch.no_grad()

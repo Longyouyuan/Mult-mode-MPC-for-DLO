@@ -36,7 +36,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 3.5
+T_task = 4.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -49,9 +49,9 @@ m_modes = 1        # 模态数（单模态=1）
 assert n_sample % m_modes == 0
 
 n_improve = 10  # 10 will be good. 1 also fine?
-noise_scale = 1.5 * 1.2  # 1.5
+noise_scale = 1.5 * 1.0  # 1.5
 action_dim = 3
-limits = torch.tensor([-5.0 * 1.2, 5.0 * 1.2])  # 5.0
+limits = torch.tensor([-5.0 * 1.0, 5.0 * 1.0])  # 5.0
 last_point_repeat = 100 * 0
 total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
@@ -93,17 +93,16 @@ points = half_dense_then_uniform(
     mode='exp', interval=(0.0, 2.0), plot=False
 )
 
-Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=True, device=device)  # 5s careful
+# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=True, device=device)  # 5s careful
 # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-# Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
 # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
 #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
 plot_goal_traj(Goal_traj, T_task)
 
 # # === 2. Draw Traj ===
-#
 # Goal_traj = build_goal_traj_from_drawn(
-#     drawn_path="../my_trajs/PatrickStar.npy",  # SpongeBob flower PatrickStar
+#     drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
 #     total_horizon=total_horizon-last_point_repeat,
 #     device=device,
 #     z0=0.2,
@@ -117,6 +116,8 @@ plot_goal_traj(Goal_traj, T_task)
 #     interval=(0.0, 2.0)
 # )
 # plot_goal_traj(Goal_traj, T_task)
+
+##-----------------------------------------------------------------------------------------------##
 
 Goal_traj = extend_last_point(Goal_traj, N=last_point_repeat)
 
@@ -245,6 +246,14 @@ print("Task time:", T_task, "   Spent time:", task_t_end-task_t_start)
 # === 动画/轨迹（保留）===
 pos_history = torch.cat(pos_history, dim=0)
 plot_tip_vs_goal_and_error(pos_history, Goal_traj[1:], dt, ctr_period, tip_idx=-1)
+
+tip_history = pos_history[:, -1, :]
+goal_history = Goal_traj[1:1 + tip_history.shape[0]]
+aligned_len = min(tip_history.shape[0], goal_history.shape[0])
+tip_goal_rmse_cm = (
+    torch.sqrt(torch.mean(torch.sum((tip_history[:aligned_len] - goal_history[:aligned_len]) ** 2, dim=-1))) * 100.0
+)
+print(f"Tip vs goal RMSE: {tip_goal_rmse_cm.item():.2f} cm")
 
 # === action 曲线（保留）===
 action_history_np = np.array(action_history)

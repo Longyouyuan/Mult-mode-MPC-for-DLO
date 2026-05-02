@@ -114,6 +114,22 @@ class Planner:
         self.last_tip_traj = None
         self.last_cost = None
         self.traj_seeds = None
+        dev_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(":")[0]
+        self._profile_uses_cuda = bool(torch.cuda.is_available() and dev_type == "cuda")
+        self._active_profile = None
+        self.last_profile = None
+        self.profile_history = []
+
+    def _sync_profile_timer(self):
+        if self._profile_uses_cuda:
+            torch.cuda.synchronize()
+
+    def reset_profile(self):
+        self.last_profile = None
+        self.profile_history.clear()
+
+    def get_profile_history(self):
+        return list(self.profile_history)
 
     # ------------------------------------------------------------
     @torch.no_grad()
@@ -162,12 +178,36 @@ class Planner:
     # ------------------------------------------------------------
     @torch.no_grad()
     def _rollout_and_cost_full_batch(self, pos, vel, ctr_batch, goal, Obs=None):
+        profile = self._active_profile
+
         if Obs is None:
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             tip_traj = self.rollout(pos, vel, ctr_batch)
+            self._sync_profile_timer()
+            if profile is not None:
+                profile["rollout"] += time.perf_counter() - t0
+
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             cost = self.cost_fn(tip_traj, goal)
+            self._sync_profile_timer()
+            if profile is not None:
+                profile["cost"] += time.perf_counter() - t0
         else:
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             full_traj = self.rollout(pos, vel, ctr_batch, full=True)
+            self._sync_profile_timer()
+            if profile is not None:
+                profile["rollout"] += time.perf_counter() - t0
+
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             cost = self.cost_fn(full_traj, goal, Obs=Obs)
+            self._sync_profile_timer()
+            if profile is not None:
+                profile["cost"] += time.perf_counter() - t0
             tip_traj = full_traj[:, :, -1, :]
         return tip_traj, cost
 
@@ -290,6 +330,11 @@ class Planner:
     # ------------------------------------------------------------
     @torch.no_grad()
     def improve_policy(self, pos, vel, goal, Obs=None):
+        self._sync_profile_timer()
+        improve_t0 = time.perf_counter()
+        profile = {"rollout": 0.0, "cost": 0.0, "multimodal": 0.0}
+        self._active_profile = profile
+
         goal = self._pad_goal_to_horizon(goal)
 
         # If external warm-start writes self.seeds, initialize optional prior around it once.
@@ -303,6 +348,8 @@ class Planner:
             batch_ctr_parameter = self._build_svgd_batch()
             batch_tip_traj, cost = self._rollout_and_cost_full_batch(pos, vel, batch_ctr_parameter, goal, Obs=Obs)
 
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             sample_actions = batch_ctr_parameter[self.m:self.m + self.n_sample].reshape(
                 self.m, self.Nk, self.horizon, self.action_dim
             )
@@ -319,9 +366,14 @@ class Planner:
 
             last_tip_traj = batch_tip_traj.detach()
             last_cost = cost.detach()
+            self._sync_profile_timer()
+            profile["multimodal"] += time.perf_counter() - t0
 
         # Final cost of representative particles only.
         particle_traj, particle_cost = self._evaluate_controls(pos, vel, self.seeds, goal, Obs=Obs)
+
+        self._sync_profile_timer()
+        t0 = time.perf_counter()
         self.particle_cost = particle_cost.detach().clone()
         self.J_star.copy_(self.particle_cost)
         self.particle_weights = self._particle_weights_from_cost(self.particle_cost).detach().clone()
@@ -337,6 +389,16 @@ class Planner:
         self.last_tip_traj = last_tip_traj
         self.last_cost = last_cost
         self.traj_seeds = particle_traj.detach()
+        self._sync_profile_timer()
+        profile["multimodal"] += time.perf_counter() - t0
+
+        self._sync_profile_timer()
+        improve_time = time.perf_counter() - improve_t0
+        profile["improve"] = improve_time
+        profile["overhead"] = improve_time - profile["rollout"] - profile["cost"] - profile["multimodal"]
+        self.last_profile = profile.copy()
+        self.profile_history.append(self.last_profile)
+        self._active_profile = None
 
     # ------------------------------------------------------------
     @torch.no_grad()
@@ -450,7 +512,7 @@ if __name__ == "__main__":
     air_drag = 0.2206 / 1000
     g = 10.07
     dt = 0.001
-    T_task = 2.5 * 4.0
+    T_task = 2.5 * 2
     total_steps = int(T_task / dt)
     mode = 'acc'
 

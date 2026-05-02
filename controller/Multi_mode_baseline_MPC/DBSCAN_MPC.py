@@ -88,6 +88,21 @@ class Planner:
         self.traj_seeds = None
         self.last_dbscan_labels = None
         self.last_good_idx = None
+        dev_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(":")[0]
+        self._profile_uses_cuda = bool(torch.cuda.is_available() and dev_type == "cuda")
+        self.last_profile = None
+        self.profile_history = []
+
+    def _sync_profile_timer(self):
+        if self._profile_uses_cuda:
+            torch.cuda.synchronize()
+
+    def reset_profile(self):
+        self.last_profile = None
+        self.profile_history.clear()
+
+    def get_profile_history(self):
+        return list(self.profile_history)
 
     @torch.no_grad()
     def _pad_goal_to_horizon(self, goal: torch.Tensor) -> torch.Tensor:
@@ -257,24 +272,49 @@ class Planner:
 
     @torch.no_grad()
     def improve_policy(self, pos, vel, goal, Obs=None):
+        self._sync_profile_timer()
+        improve_t0 = time.perf_counter()
         goal = self._pad_goal_to_horizon(goal)
 
         batch_traj = None
         cost = None
         best_full_idx = None
         rep_full_idx = None
+        rollout_time = 0.0
+        cost_time = 0.0
+        multimodal_time = 0.0
 
         for _ in range(self.n_improve):
             batch_ctr_parameter = self._build_candidates_full_horizon()
 
             if Obs is None:
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 batch_traj = self.rollout(pos, vel, batch_ctr_parameter)
+                self._sync_profile_timer()
+                rollout_time += time.perf_counter() - t0
+
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 cost = self.cost_fn(batch_traj, goal)
+                self._sync_profile_timer()
+                cost_time += time.perf_counter() - t0
             else:
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 batch_traj_full = self.rollout(pos, vel, batch_ctr_parameter, full=True)
+                self._sync_profile_timer()
+                rollout_time += time.perf_counter() - t0
+
+                self._sync_profile_timer()
+                t0 = time.perf_counter()
                 cost = self.cost_fn(batch_traj_full, goal, Obs=Obs)
+                self._sync_profile_timer()
+                cost_time += time.perf_counter() - t0
                 batch_traj = batch_traj_full[:, :, -1, :]
 
+            self._sync_profile_timer()
+            t0 = time.perf_counter()
             sort_idx = torch.argsort(cost)
             K0 = min(self.top_k_good, int(sort_idx.numel()))
             good_idx = sort_idx[:K0]
@@ -310,6 +350,8 @@ class Planner:
 
             self.seeds.copy_(batch_ctr_parameter[best_full_idx].view(1, self.horizon, self.action_dim))
             self.J_star[0] = cost[best_full_idx]
+            self._sync_profile_timer()
+            multimodal_time += time.perf_counter() - t0
 
         self.last_tip_traj = batch_traj.detach()
         self.last_cost = cost.detach()
@@ -319,6 +361,18 @@ class Planner:
             self.traj_seeds = batch_traj[best_full_idx:best_full_idx + 1].detach()
         else:
             self.traj_seeds = None
+
+        self._sync_profile_timer()
+        improve_time = time.perf_counter() - improve_t0
+        profile = {
+            "improve": improve_time,
+            "rollout": rollout_time,
+            "cost": cost_time,
+            "multimodal": multimodal_time,
+            "overhead": improve_time - rollout_time - cost_time - multimodal_time,
+        }
+        self.last_profile = profile
+        self.profile_history.append(profile)
 
     @torch.no_grad()
     def update_policy(self):

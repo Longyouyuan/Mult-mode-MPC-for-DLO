@@ -1,10 +1,11 @@
 import mujoco.viewer as viewer
+import random
 import time
+from pathlib import Path
 from Mujoco_env.mj_utils import *
 from common.utils import *
 from M2PC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
-
 
 # ===================== MuJoCo setup =====================
 model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
@@ -40,7 +41,7 @@ total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
 ctr_period = 25  # 1000/ctr_period Hz
-horizon = 30
+horizon = 35
 
 # ===== 多模态参数 =====
 n_sample = 400
@@ -58,11 +59,13 @@ top_k_good = 200
 beta = 5.0
 wJ = 0.0
 
-visualization = True
+visualization = False
+DISTURBANCE_DATA_DIR = Path(__file__).resolve().parent / "disturbance_data"
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
+set_seed(0)
 
 # ===================== Rope model instance =====================
 rope = WarpRope(
@@ -131,7 +134,7 @@ planner.n_improve = n_improve
 
 # ===================== Viewer / Simulation loop =====================
 with viewer.launch_passive(model, data) as viewer:
-    cam_setting(viewer, fixed=True)
+    cam_setting(viewer, fixed=False)
     viewer.showinfo = True
 
     goal_his = []
@@ -163,7 +166,10 @@ with viewer.launch_passive(model, data) as viewer:
 
     task_t_start = time.perf_counter()
 
-    for i in range(total_horizon*2):
+    force = -1.0
+    change = False
+
+    for i in range(total_horizon*2+40):
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
@@ -213,7 +219,11 @@ with viewer.launch_passive(model, data) as viewer:
 
             if (i - warm_step) % int(total_horizon/2) <= 1:
                 # data.xfrc_applied[B_first, :3] = v
-                data.xfrc_applied[B_first, :3] = np.array([1.0, 0, 0])
+                data.xfrc_applied[B_first, :3] = np.array([force, 0, 0])
+                change = True
+            elif change is True:
+                change = False
+                force *= -1
 
             mujoco.mj_step(model, data)
 
@@ -244,8 +254,29 @@ pos_history = torch.cat(pos_history, dim=0)
 
 # Compare tip vs goal: now goal for the whole run is infinite, so create a matching-length goal window
 Goal_run = eight_inf.get_range(start=1, length=pos_history.shape[0] + 1)  # align with your previous Goal_traj[1:]
+disturbance_indices = np.array([warm_step, warm_step + int(total_horizon / 2)], dtype=np.int64)
+disturbance_points = eight_inf.get(disturbance_indices.tolist()).detach().cpu().numpy().astype(np.float32)
+
+goal_trajectory = Goal_run[:pos_history.shape[0]].detach().cpu().numpy().astype(np.float32)
+rope_trajectory = pos_history.detach().cpu().numpy().astype(np.float32)
+
+DISTURBANCE_DATA_DIR.mkdir(parents=True, exist_ok=True)
+np.save(DISTURBANCE_DATA_DIR / "goal_trajectory.npy", goal_trajectory)
+np.save(DISTURBANCE_DATA_DIR / "rope_trajectory.npy", rope_trajectory)
+np.save(DISTURBANCE_DATA_DIR / "disturbance_points.npy", disturbance_points)
+np.savez(
+    DISTURBANCE_DATA_DIR / "robustness_disturbance_data.npz",
+    goal_trajectory=goal_trajectory,
+    rope_trajectory=rope_trajectory,
+    disturbance_points=disturbance_points,
+    disturbance_indices=disturbance_indices,
+    dt=np.float32(dt),
+    ctr_period=np.int64(ctr_period),
+)
+print(f"Saved disturbance data to: {DISTURBANCE_DATA_DIR}")
+
 plot_tip_vs_goal_and_error(pos_history, Goal_run, dt, ctr_period,
-                           dist=eight_inf.get([warm_step,warm_step+int(total_horizon/2)]).detach().cpu().numpy())
+                           dist=disturbance_points)
 
 # === action curves ===
 action_history_np = np.array(action_history)

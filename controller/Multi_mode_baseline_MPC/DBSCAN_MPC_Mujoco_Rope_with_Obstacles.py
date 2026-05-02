@@ -169,7 +169,7 @@ max_draw_clusters = 10       # 类似原来的 m_modes，只用于画 cluster re
 members_per_cluster = 8     # 每个 cluster 再画几个其它成员，类似 cand_tip_traj
 k_cand_fallback = max_draw_clusters * max(1, members_per_cluster)
 
-visualization = True
+visualization = False
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -210,7 +210,7 @@ eight_inf = build_infinite_eight(
 
 # For visualization over this 5s task window (not necessary for control)
 Goal_traj = eight_inf.get_range(start=warm_step, length=total_horizon + 1)  # (total_horizon+1,3)
-plot_goal_traj(Goal_traj, T_task)
+# plot_goal_traj(Goal_traj, T_task)
 
 # ===================== Planner =====================
 planner = Planner(
@@ -256,6 +256,7 @@ with viewer.launch_passive(model, data) as viewer:
     vel_history = []
     pos_history = []
     time_record = []
+    profile_records = []
 
     node = len(cable_body_indices) + 1
     mj_state = np.zeros((1, 1 + node * 6 + 3))
@@ -307,7 +308,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     task_t_start = time.perf_counter()
 
-    for i in range(total_horizon * 2):
+    for i in range(total_horizon * 2 +40):
         # == rope state ==
         mujoco.mj_forward(model, data)
         mj_state[0, 0] = data.time
@@ -324,8 +325,12 @@ with viewer.launch_passive(model, data) as viewer:
         Obs_info[1, :] = data.xpos[cyl1_body].copy()  # (3,) numpy array
         Obs_info[2, :] = data.xpos[cyl2_body].copy()
 
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
         t0 = time.perf_counter()
         planner.improve_policy(pos, vel, goal, Obs=Obs_info)
+        if planner.last_profile is not None:
+            profile_records.append(planner.last_profile.copy())
 
         # labels = planner.last_dbscan_labels
         # num_clusters = 0 if labels is None else int(torch.unique(labels[labels >= 0]).numel())
@@ -334,6 +339,8 @@ with viewer.launch_passive(model, data) as viewer:
         if torch.isinf(planner.J_star).any().item():
             print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
         action = planner.get_action(rule='greedy').cpu().numpy()  # DBSCAN-MPC has one selected seed
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
         t1 = time.perf_counter()
         time_record.append(t1 - t0)
 
@@ -400,7 +407,27 @@ with viewer.launch_passive(model, data) as viewer:
         planner.update_policy()
 
 task_t_end = time.perf_counter()
-print("average time on inference: ", torch.tensor(time_record).mean(), "Desired time:", dt * ctr_period)
+def print_timing_stats(name, values):
+    if len(values) == 0:
+        print(f"{name}: no samples")
+        return
+    values_t = torch.as_tensor(values, dtype=torch.float64)
+    mean_s = values_t.mean().item()
+    var_s2 = values_t.var(unbiased=False).item()
+    print(f"{name}: mean={mean_s:.6f} s ({mean_s * 1000.0:.3f} ms), var={var_s2:.6e} s^2")
+
+
+print_timing_stats("time_record / outer improve_policy timing", time_record)
+for key, label in [
+    ("improve", "planner.improve_policy internal total"),
+    ("rollout", "rollout"),
+    ("cost", "cost"),
+    ("multimodal", "DBSCAN multimodal selection"),
+    ("overhead", "profiled overhead"),
+]:
+    print_timing_stats(label, [record[key] for record in profile_records if key in record])
+
+print("Desired time:", dt * ctr_period)
 print("Task time:", T_task, "   Spent time:", task_t_end - task_t_start)
 
 # ===================== Post plots (keep your original logic) =====================

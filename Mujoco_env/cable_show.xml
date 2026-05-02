@@ -17,7 +17,7 @@
 <!--  <option integrator="implicit" viscosity="0.0004"/>  &lt;!&ndash; viscosity="0.0002" &ndash;&gt;-->
   <option viscosity="0.0002"/>   <!-- 积分方式很重要！！！ -->
   <option timestep="0.001" />
-  <include file="scene.xml"/>
+  <include file="scene2.xml"/>
 
   <extension>
     <plugin plugin="mujoco.elasticity.cable"/>
@@ -66,7 +66,7 @@
     <body name="cyl_2" pos="0.6 0.4 -1.0">
       <joint name="cyl_2_x" type="slide" axis="1 0 0" damping="100.0"/>    <!--1.0-->
       <joint name="cyl_2_y" type="slide" axis="0 1 0" damping="100.0"/>
-      <geom type="cylinder" size="0.05 0.12" rgba="0.75 0.3 0.9 1.0"/>
+      <geom type="cylinder" size="0.05 0.12" rgba="0.48 0.26 0.12 1"/>
 <!--      size = [radius, half_height]-->
     </body>
 

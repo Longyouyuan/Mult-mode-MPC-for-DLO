@@ -216,6 +216,7 @@ smart = True
 visualize_indices = list(range(18))
 
 model_name = f'trained_tracking_controller_cp{ctr_period}_pre{pre_length}_{mode}_ma{max_action}_N{N}_L{L}_ctr_smart_right.pt'
+# model_name = 'trained_directfit_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct18.pt'
 
 
 def main():

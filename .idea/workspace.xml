@@ -2,13 +2,30 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8c6d3ffd-9a60-4be1-b58a-3554537b658d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Robustness_record_video.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking_paper_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_with_Obstacles_record_video.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/speed_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_lstm.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_torch_paper_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2_lstm.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Mujoco_env/cable_show.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Mujoco_env/cable_show.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Mujoco_env/mj_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mujoco_env/mj_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/M2PC.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/M2PC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Robustness.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Robustness.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_with_Obstacles.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_with_Obstacles.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline/DBSCAN_MPC_torch.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/MUJOCO_LOG.TXT" beforeDir="false" afterPath="$PROJECT_DIR$/controller/MUJOCO_LOG.TXT" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_torch.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_torch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/trained_directfit_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct18.pt" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/trained_directfit_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct18.pt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/report.pptx" beforeDir="false" afterPath="$PROJECT_DIR$/report.pptx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -43,27 +60,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/long/Desktop/Mult-mode-MPC-for-DLO&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "E:/Desktop/Rope Manipulatioin 3D"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\common" />
       <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\Mujoco_env" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller" />
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\tracking_data" />
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\SPiD_tracking" />
       <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\Multi_mode_baseline" />
       <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\rocco_server" />
-      <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO" />
-      <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\controller" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.M2PC_Mujoco_Rope_with_Obstacles">
-    <configuration name="DBSCAN_MPC_Mujoco_Rope_with_Obstacles (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.DBSCAN_MPC_Mujoco_Rope_with_Obstacles">
+    <configuration name="DBSCAN_MPC_Mujoco_Rope_with_Obstacles" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -76,27 +94,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="DBSCAN_MPC_Mujoco_Rope_with_Obstacles" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Mult-mode MPC for DLO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/Multi_mode_baseline" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/Multi_mode_baseline/DBSCAN_MPC_Mujoco_Rope_with_Obstacles.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -126,6 +123,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="SVMPC" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Mult-mode MPC for DLO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="SVMPC_Mujoco_Rope_with_Obstacles" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -147,7 +165,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="training_SPiD_2" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="speed_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -155,11 +173,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/SPiD_tracking" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/speed_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -170,11 +188,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.M2PC_Mujoco_Rope_with_Obstacles" />
-        <item itemvalue="Python.DBSCAN_MPC_Mujoco_Rope_with_Obstacles (1)" />
-        <item itemvalue="Python.training_SPiD_2" />
-        <item itemvalue="Python.SVMPC_Mujoco_Rope_with_Obstacles" />
         <item itemvalue="Python.DBSCAN_MPC_Mujoco_Rope_with_Obstacles" />
+        <item itemvalue="Python.M2PC_Mujoco_Rope_with_Obstacles" />
+        <item itemvalue="Python.speed_test" />
+        <item itemvalue="Python.SVMPC" />
+        <item itemvalue="Python.SVMPC_Mujoco_Rope_with_Obstacles" />
       </list>
     </recent_temporary>
   </component>
@@ -215,18 +233,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller/M2PC.py</url>
-          <line>543</line>
+          <line>600</line>
           <option name="timeStamp" value="37" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/Mujoco_env/mj_utils.py</url>
-          <line>149</line>
+          <line>157</line>
           <option name="timeStamp" value="68" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/controller/M2PC.py</url>
-          <line>190</line>
-          <option name="timeStamp" value="120" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/common/rope_warp_4_baserope.py</url>
@@ -277,6 +290,31 @@
           <url>file://$PROJECT_DIR$/controller/SPiD_tracking/training_SPid.py</url>
           <line>348</line>
           <option name="timeStamp" value="161" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2_lstm.py</url>
+          <line>133</line>
+          <option name="timeStamp" value="162" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/SPiD_tracking/training_SPiD_2_lstm.py</url>
+          <line>132</line>
+          <option name="timeStamp" value="163" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py</url>
+          <line>286</line>
+          <option name="timeStamp" value="165" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py</url>
+          <line>247</line>
+          <option name="timeStamp" value="166" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_with_Obstacles.py</url>
+          <line>253</line>
+          <option name="timeStamp" value="196" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

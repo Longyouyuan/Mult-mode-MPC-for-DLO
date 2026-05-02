@@ -130,6 +130,7 @@ last_point_repeat = 100 * 0
 total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
 model_name = f'trained_tracking_controller_cp{ctr_period}_pre{pre_length}_{mode}_ma{max_action}_N{N}_L{L}_ctr_smart_right.pt'
+# model_name = 'trained_directfit_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct18.pt'
 
 # === Setup device ===
 device = torch.device('cpu')
