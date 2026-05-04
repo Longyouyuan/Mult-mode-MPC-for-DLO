@@ -1,14 +1,18 @@
+import mujoco
 import mujoco.viewer as viewer
 import time
+from pathlib import Path
+import imageio.v2 as imageio
+import numpy as np
 from Mujoco_env.mj_utils import *
 from common.utils import *
-from M2PC import Planner, cost_fn
+from SVMPC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
 import warnings
 
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path('../../Mujoco_env/cable_show.xml')
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -43,23 +47,119 @@ mode = 'acc'  # 或 'vel'
 ctr_period = 25  # 1000/ctr_period Hz
 horizon = 35
 
-# ===== 多模态参数 =====
+# ===== SV-MPC particle / sampling 参数 =====
 n_sample = 402 * 1
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 1
+n_improve = 2
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
-# diversity 超参
+# diversity 超参（SVMPC 中仅为兼容 M2PC 接口；实际不参与 SVGD）
 top_k_good = 200 * 3
 beta = 1.0
-wJ =  1.7  # 1.5
+wJ = 1.5
 
-visualization = False
+# ===================== SV-MPC hyperparameters =====================
+# m_modes 在 SVMPC 中表示 Stein particles 数量
+# n_sample 是所有 particles 周围的总 Monte-Carlo rollout 数，要求 n_sample % m_modes == 0
+alpha = 5.0
+lambda_ = 1.0
+svgd_step_size = 1.0
+likelihood_type = 'EU'      # 'EU' or 'PLC'
+prior_weight = 0.001          # 建议默认 0，避免 particles 被 prior 拉塌
+update_prior_mean = False
+update_prior_cov = False
+use_weighted_average = False
+
+visualization = True
+
+
+# ===================== Video / data output =====================
+# Same recorder style as M2PC_Mujoco_Rope_with_Obstacles_record_video.py:
+# low-level GLContext + mjr_readPixels, copying viewer.user_scn so predicted
+# trajectories drawn by TrajDrawer are included in the video.
+RECORD_VIDEO = False
+RECORD_DATA = False
+VIDEO_WIDTH = 1920
+VIDEO_HEIGHT = 1080
+VIDEO_FPS = 60
+VIDEO_DIR = Path("../vedios/obs_avoidance")
+VIDEO_PATH = VIDEO_DIR / "svmpc_rope_obstacle_avoidance.mp4"
+
+DATA_DIR = Path("../obstacle_avoidance_data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _copy_mjv_geom(dst, src):
+    """Copy one MjvGeom in a MuJoCo-version-compatible way.
+
+    scene.geoms is tuple-like in MuJoCo Python, so copy fields into the
+    existing destination geom instead of assigning a new geom object.
+    """
+    if hasattr(dst, "copy_from"):
+        dst.copy_from(src)
+        return
+
+    for name in dir(src):
+        if name.startswith("_") or name in ("copy", "copy_from"):
+            continue
+        try:
+            value = getattr(src, name)
+        except Exception:
+            continue
+        if callable(value):
+            continue
+        try:
+            target = getattr(dst, name)
+        except Exception:
+            continue
+        try:
+            target[...] = value
+            continue
+        except Exception:
+            pass
+        try:
+            setattr(dst, name, value)
+        except Exception:
+            pass
+
+
+def _append_user_scene_geoms(render_scene, user_scene):
+    """Copy TrajDrawer goal/prediction geoms from viewer.user_scn into the offscreen scene."""
+    if user_scene is None or user_scene.ngeom <= 0:
+        return
+    n_copy = min(user_scene.ngeom, render_scene.maxgeom - render_scene.ngeom)
+    if n_copy <= 0:
+        return
+    dst_start = render_scene.ngeom
+    for k in range(n_copy):
+        _copy_mjv_geom(render_scene.geoms[dst_start + k], user_scene.geoms[k])
+    render_scene.ngeom += n_copy
+
+
+def record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer_handle):
+    """Render one offscreen frame using the current viewer camera and user_scn overlays."""
+    with viewer_handle.lock():
+        mujoco.mjv_updateScene(
+            model,
+            data,
+            viewer_handle.opt,
+            None,
+            viewer_handle.cam,
+            mujoco.mjtCatBit.mjCAT_ALL,
+            record_scene,
+        )
+        _append_user_scene_geoms(record_scene, viewer_handle.user_scn)
+
+    mujoco.mjr_render(record_viewport, record_scene, record_ctx)
+    rgb = np.zeros((VIDEO_HEIGHT, VIDEO_WIDTH, 3), dtype=np.uint8)
+    mujoco.mjr_readPixels(rgb, None, record_viewport, record_ctx)
+    video_writer.append_data(np.flipud(rgb))
+
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -107,13 +207,37 @@ planner = Planner(
     rope, cost_fn, dt, ctr_period, horizon,
     n_sample, n_improve, noise_scale, action_dim,
     limits=limits, device=device, mode=mode,
-    m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ, standard_m2pc=True
+    m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ, standard_m2pc=True,
+    alpha=alpha, lambda_=lambda_, svgd_step_size=svgd_step_size, kernel_h=50.0,
+    likelihood_type=likelihood_type,
+    prior_weight=prior_weight,
+    update_prior_mean=update_prior_mean,
+    update_prior_cov=update_prior_cov,
+    use_weighted_average=use_weighted_average
 )
 
 # ===================== Init state =====================
 pos = torch.zeros((1, P, 3), device=device)
 pos[:, :, 2] = torch.linspace(1.2, 0.2, steps=P, device=device)
 vel = torch.zeros((1, P, 3), device=device)
+
+# ===================== Warm start SVMPC particles =====================
+# 保持 M2PC 风格：用目标轨迹差分初始化所有 particles，再给非主 particle 加一点扰动。
+# 注意这里用 dt * ctr_period 作为相邻 MPC knot 的时间间隔。
+Goal_init = eight_inf.get_range(start=0, length=horizon + 1)  # (horizon+1,3)
+vel_start = (Goal_init[1:] - Goal_init[:-1]) / (dt * ctr_period)
+vel_start = vel_start.to(device)
+
+planner.seeds[:] = vel_start.unsqueeze(0).repeat(m_modes, 1, 1)
+if m_modes > 1:
+    planner.seeds[1:] += 0.10 * torch.randn_like(planner.seeds[1:])
+planner.prior_mean.copy_(planner.seeds)
+
+goal = eight_inf.get_range(start=1, length=horizon)
+planner.n_improve = max(n_improve * 5, n_improve)
+planner.improve_policy(pos, vel, goal)
+planner.n_improve = n_improve
+planner.reset_profile()
 
 # # ===================== Warm up seeds =====================
 # # Use infinite-goal for the initial horizon, and correct time scale dt * ctr_period
@@ -186,13 +310,48 @@ with viewer.launch_passive(model, data) as viewer:
     prev_hit = False  # 防刷屏：只在刚碰到时打印
     hit_times = 0
 
-    k_cand = 30
+    k_cand = 100
     # TrajDrawer still uses a finite window for drawing (Goal_traj over 5s)
     traj_drawer = TrajDrawer(
         viewer, goal_traj=Goal_traj.cpu(),
-        K=k_cand, H=horizon, m=m_modes,
+        K=False, H=horizon, m=m_modes,
         draw_candidates=False, draw_modes=True
     )
+
+    video_writer = None
+    gl_ctx = None
+    record_scene = None
+    record_ctx = None
+    record_viewport = None
+    next_frame_time = 0.0
+    frame_interval = 1.0 / VIDEO_FPS
+
+    if RECORD_VIDEO:
+        VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+        video_writer = imageio.get_writer(
+            VIDEO_PATH,
+            fps=VIDEO_FPS,
+            codec="libx264",
+            macro_block_size=1,
+            output_params=[
+                "-b:v", "12M",
+                "-maxrate", "12M",
+                "-bufsize", "24M",
+                "-pix_fmt", "yuv420p",
+            ],
+        )
+        # Low-level GLContext + mjr_readPixels avoids mujoco.Renderer XML offwidth/offheight limits.
+        gl_ctx = mujoco.GLContext(VIDEO_WIDTH, VIDEO_HEIGHT)
+        gl_ctx.make_current()
+        record_scene = mujoco.MjvScene(model, maxgeom=20000)
+        record_ctx = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        record_viewport = mujoco.MjrRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT)
+
+    # Record the initial view, including the static goal trajectory drawn by TrajDrawer.
+    viewer.sync()
+    if RECORD_VIDEO:
+        record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer)
+        next_frame_time += frame_interval
 
     task_t_start = time.perf_counter()
 
@@ -231,7 +390,13 @@ with viewer.launch_passive(model, data) as viewer:
         # visualization
         if visualization:
             cand_tip_traj, cand_cost, m_mode_trajs = planner.get_cand(k_cand=k_cand)
-            idx_end = traj_drawer.update(cand_tip_traj.cpu(), cand_cost.cpu(), m_mode_trajs.cpu(), offset=None)
+            if cand_tip_traj is not None:
+                idx_end = traj_drawer.update(
+                    cand_tip_traj.cpu(),
+                    cand_cost.cpu(),
+                    m_mode_trajs.cpu() if m_mode_trajs is not None else None,
+                    offset=None
+                )
 
         # ---- Execute chosen action in MuJoCo ----
         for j in range(ctr_period):
@@ -251,12 +416,13 @@ with viewer.launch_passive(model, data) as viewer:
 
             mujoco.mj_step(model, data)
 
+            # Sample frames by simulation time, so the video plays at 1x speed and 60 fps.
+            if RECORD_VIDEO:
+                while data.time + 1e-12 >= next_frame_time:
+                    record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer)
+                    next_frame_time += frame_interval
+
         viewer.sync()
-        # time.sleep(0.1)
-        # print("lookat:", viewer.cam.lookat)
-        # print("distance:", viewer.cam.distance)
-        # print("azimuth:", viewer.cam.azimuth)
-        # print("elevation:", viewer.cam.elevation)
 
         hit = False
         for ci in range(data.ncon):
@@ -286,6 +452,15 @@ with viewer.launch_passive(model, data) as viewer:
 
         planner.update_policy()
 
+    if video_writer is not None:
+        video_writer.close()
+    if record_ctx is not None:
+        record_ctx.free()
+    if gl_ctx is not None:
+        gl_ctx.free()
+    if RECORD_VIDEO:
+        print(f"Saved video to: {VIDEO_PATH}")
+
 task_t_end = time.perf_counter()
 def print_timing_stats(name, values):
     if len(values) == 0:
@@ -297,111 +472,32 @@ def print_timing_stats(name, values):
     print(f"{name}: mean={mean_s:.6f} s ({mean_s * 1000.0:.3f} ms), var={var_s2:.6e} s^2")
 
 
+def save_profile_records(path, records):
+    keys = ("improve", "rollout", "cost", "multimodal", "overhead")
+    arrays = {
+        key: np.asarray([record.get(key, np.nan) for record in records], dtype=np.float64)
+        for key in keys
+    }
+    np.savez(path, **arrays)
+    print(f"Saved profile records to: {path}")
+
+
 print_timing_stats("time_record / outer improve_policy timing", time_record)
 for key, label in [
     ("improve", "planner.improve_policy internal total"),
     ("rollout", "rollout"),
     ("cost", "cost"),
-    ("multimodal", "M2PC multimodal selection"),
+    ("multimodal", "SVMPC multimodal / SVGD update"),
     ("overhead", "profiled overhead"),
 ]:
     print_timing_stats(label, [record[key] for record in profile_records if key in record])
 
 print("Desired time:", dt * ctr_period)
 print("Task time:", T_task, "   Spent time:", task_t_end - task_t_start)
+save_profile_records(DATA_DIR / "svmpc_profile_records.npz", profile_records)
 
-# ===================== Post plots (keep your original logic) =====================
+# ===================== Save trajectory data only =====================
 pos_history = torch.cat(pos_history, dim=0)
-
-# Compare tip vs goal: now goal for the whole run is infinite, so create a matching-length goal window
-Goal_run = eight_inf.get_range(start=1, length=pos_history.shape[0] + 1)  # align with your previous Goal_traj[1:]
-plot_tip_vs_goal_and_error(pos_history, Goal_run, dt, ctr_period)
-# import numpy as np
-# np.save('./obstacle_avoidance_data/m2pc_rope_traj.npy', pos_history.cpu().numpy())
-# np.save('./obstacle_avoidance_data/goal_traj.npy', Goal_run.cpu().numpy())
-
-# === action curves ===
-action_history_np = np.array(action_history)
-time_axis = np.arange(action_history_np.shape[0]) * ctr_period * dt
-
-plt.figure(figsize=(10, 6))
-plt.plot(time_axis, action_history_np[:, 0], label='Action X', color='r')
-plt.plot(time_axis, action_history_np[:, 1], label='Action Y', color='g')
-plt.plot(time_axis, action_history_np[:, 2], label='Action Z', color='b')
-plt.xlabel('Time (s)')
-plt.ylabel('Action Value')
-plt.title('Action XYZ over Time')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# === velocity curves ===
-vel_history_np = np.stack([
-    v.detach().cpu().numpy() if torch.is_tensor(v) else np.asarray(v)
-    for v in vel_history
-], axis=0)[:, 0]
-
-plt.figure(figsize=(10, 6))
-plt.plot(time_axis, vel_history_np[:, 0, 0], label='Velocity X', color='r', linestyle='--')
-plt.plot(time_axis, vel_history_np[:, 0, 1], label='Velocity Y', color='g', linestyle='--')
-plt.plot(time_axis, vel_history_np[:, 0, 2], label='Velocity Z', color='b', linestyle='--')
-plt.xlabel('Time (s)')
-plt.ylabel('Velocity Value')
-plt.title('Top Velocity XYZ over Time')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# pos 轨迹
-tip_pos_history = pos_history[:, 0, :]
-plt.figure(figsize=(10, 6))
-plt.plot(time_axis, tip_pos_history[:, 0].cpu().numpy(), label='Tip X', color='m')
-plt.plot(time_axis, tip_pos_history[:, 1].cpu().numpy(), label='Tip Y', color='c')
-plt.plot(time_axis, tip_pos_history[:, 2].cpu().numpy(), label='Tip Z', color='y')
-plt.xlabel('Time (s)')
-plt.ylabel('top Position')
-plt.title('Top Point Position XYZ over Time')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# ================== Check low-level controller performance ==========================
-time_idx = list(range(len(goal_his)))
-goal_array = np.array(goal_his)
-slider_pos_array = np.array(slider_pos)
-rope_top_array = np.array(rope_top)
-
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 8))
-
-ax1.plot(time_idx, goal_array[:, 0], label='Goal', color='blue', linestyle='-')
-ax1.plot(time_idx, slider_pos_array[:, 0], label='Slider', color='green', linestyle='--')
-ax1.plot(time_idx, rope_top_array[:, 0], label='Rope Top', color='red', linestyle=':')
-ax1.set_title('X-axis Position Tracking')
-ax1.set_xlabel('Time Step')
-ax1.set_ylabel('X Position')
-ax1.grid(True)
-ax1.legend()
-
-ax2.plot(time_idx, goal_array[:, 1], label='Goal', color='blue', linestyle='-')
-ax2.plot(time_idx, slider_pos_array[:, 1], label='Slider', color='green', linestyle='--')
-ax2.plot(time_idx, rope_top_array[:, 1], label='Rope Top', color='red', linestyle=':')
-ax2.set_title('Y-axis Position Tracking')
-ax2.set_xlabel('Time Step')
-ax2.set_ylabel('Y Position')
-ax2.grid(True)
-ax2.legend()
-
-ax3.plot(time_idx, goal_array[:, 2], label='Goal', color='blue', linestyle='-')
-ax3.plot(time_idx, slider_pos_array[:, 2], label='Slider', color='green', linestyle='--')
-ax3.plot(time_idx, rope_top_array[:, 2], label='Rope Top', color='red', linestyle=':')
-ax3.set_title('Z-axis Position Tracking')
-ax3.set_xlabel('Time Step')
-ax3.set_ylabel('Z Position')
-ax3.grid(True)
-ax3.legend()
-
-plt.tight_layout()
-plt.show()
+if RECORD_DATA:
+    np.save(DATA_DIR / "svmpc_rope_traj.npy", pos_history.cpu().numpy())
+    print(f"Saved rope trajectory to: {DATA_DIR / 'svmpc_rope_traj.npy'}")

@@ -68,7 +68,8 @@ visualization = True
 # ===================== Video / data output =====================
 # Match the robustness recorder: low-level GLContext + mjr_readPixels, with
 # explicit x264 settings so the 1920x1080 video is not blurred by defaults.
-RECORD_VIDEO = True
+RECORD_VIDEO = False
+RECORD_DATA = False
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080
 VIDEO_FPS = 60
@@ -243,6 +244,7 @@ with viewer.launch_passive(model, data) as viewer:
 
     pos_history = []
     time_record = []
+    profile_records = []
 
     node = len(cable_body_indices) + 1
     mj_state = np.zeros((1, 1 + node * 6 + 3))
@@ -350,11 +352,17 @@ with viewer.launch_passive(model, data) as viewer:
             Obs_info[1, :] = data.xpos[cyl1_body].copy()
             Obs_info[2, :] = data.xpos[cyl2_body].copy()
 
+            if device.type == 'cuda':
+                torch.cuda.synchronize()
             t0 = time.perf_counter()
             planner.improve_policy(pos, vel, goal, Obs=Obs_info)
+            if planner.last_profile is not None:
+                profile_records.append(planner.last_profile.copy())
             if torch.isinf(planner.J_star).any().item():
                 print(f"[WARN] step={i}: planner.J_star contains inf, J_star={planner.J_star.detach().cpu().tolist()}")
             action = planner.get_action(rule='greedy').cpu().numpy()
+            if device.type == 'cuda':
+                torch.cuda.synchronize()
             t1 = time.perf_counter()
             time_record.append(t1 - t0)
 
@@ -418,15 +426,47 @@ with viewer.launch_passive(model, data) as viewer:
 
 
 task_t_end = time.perf_counter()
-print("average time on inference: ", torch.tensor(time_record).mean(), "Desired time:", dt * ctr_period)
+def print_timing_stats(name, values):
+    if len(values) == 0:
+        print(f"{name}: no samples")
+        return
+    values_t = torch.as_tensor(values, dtype=torch.float64)
+    mean_s = values_t.mean().item()
+    var_s2 = values_t.var(unbiased=False).item()
+    print(f"{name}: mean={mean_s:.6f} s ({mean_s * 1000.0:.3f} ms), var={var_s2:.6e} s^2")
+
+
+def save_profile_records(path, records):
+    keys = ("improve", "rollout", "cost", "multimodal", "overhead")
+    arrays = {
+        key: np.asarray([record.get(key, np.nan) for record in records], dtype=np.float64)
+        for key in keys
+    }
+    np.savez(path, **arrays)
+    print(f"Saved profile records to: {path}")
+
+
+print_timing_stats("time_record / outer improve_policy timing", time_record)
+for key, label in [
+    ("improve", "planner.improve_policy internal total"),
+    ("rollout", "rollout"),
+    ("cost", "cost"),
+    ("multimodal", "M2PC multimodal selection"),
+    ("overhead", "profiled overhead"),
+]:
+    print_timing_stats(label, [record[key] for record in profile_records if key in record])
+
 print("Task time:", T_task, "   Spent time:", task_t_end - task_t_start)
+print("Desired time:", dt * ctr_period)
 print(f"Saved video to: {VIDEO_PATH}")
+save_profile_records(DATA_DIR / "m2pc_profile_records.npz", profile_records)
 
 # ===================== Save data only =====================
 pos_history = torch.cat(pos_history, dim=0)
 Goal_run = eight_inf.get_range(start=1, length=pos_history.shape[0] + 1)
-np.save(DATA_DIR / "m2pc_rope_traj.npy", pos_history.cpu().numpy())
-np.save(DATA_DIR / "goal_traj.npy", Goal_run.cpu().numpy())
-print(f"Saved rope trajectory to: {DATA_DIR / 'm2pc_rope_traj.npy'}")
-print(f"Saved goal trajectory to: {DATA_DIR / 'goal_traj.npy'}")
+if RECORD_DATA:
+    np.save(DATA_DIR / "m2pc_rope_traj.npy", pos_history.cpu().numpy())
+    np.save(DATA_DIR / "goal_traj.npy", Goal_run.cpu().numpy())
+    print(f"Saved rope trajectory to: {DATA_DIR / 'm2pc_rope_traj.npy'}")
+    print(f"Saved goal trajectory to: {DATA_DIR / 'goal_traj.npy'}")
 

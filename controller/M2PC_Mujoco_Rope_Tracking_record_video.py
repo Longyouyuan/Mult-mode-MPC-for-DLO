@@ -1,6 +1,9 @@
+import mujoco
 import mujoco.viewer as viewer
 from Mujoco_env.mj_utils import *
 import time
+from pathlib import Path
+import imageio.v2 as imageio
 from common.utils import *
 
 from M2PC import Planner, cost_fn
@@ -36,7 +39,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 4.0
+T_task = 15.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -60,12 +63,89 @@ top_k_good = 200
 beta = 5.0
 wJ = 0.0
 
-visualization = False
+visualization = True
+
+# ===================== User options =====================
+# 只改这里即可：T_task 控制任务时长；TRAJ_SHAPE 从下面 6 种里选一种。
+# 可选: "sin", "egg", "eight", "spongebob", "PatrickStar", "flower"
+TRAJ_SHAPE = "flower"
+
+# ===================== Video recording =====================
+RECORD_VIDEO = True
+VIDEO_WIDTH = 1920
+VIDEO_HEIGHT = 1080
+VIDEO_FPS = 60
+VIDEO_DIR = Path("./vedios/tracking")
+VIDEO_PATH = VIDEO_DIR / f"m2pc_tracking_{TRAJ_SHAPE}_{T_task:g}s.mp4"
+
+
+def _copy_mjv_geom(dst, src):
+    """Copy one MjvGeom in a MuJoCo-version-compatible way."""
+    if hasattr(dst, "copy_from"):
+        dst.copy_from(src)
+        return
+
+    for name in dir(src):
+        if name.startswith("_") or name in ("copy", "copy_from"):
+            continue
+        try:
+            value = getattr(src, name)
+        except Exception:
+            continue
+        if callable(value):
+            continue
+        try:
+            target = getattr(dst, name)
+        except Exception:
+            continue
+        try:
+            target[...] = value
+            continue
+        except Exception:
+            pass
+        try:
+            setattr(dst, name, value)
+        except Exception:
+            pass
+
+
+def _append_user_scene_geoms(render_scene, user_scene):
+    """Copy TrajDrawer goal/prediction geoms from viewer.user_scn into the offscreen scene."""
+    if user_scene is None or user_scene.ngeom <= 0:
+        return
+    n_copy = min(user_scene.ngeom, render_scene.maxgeom - render_scene.ngeom)
+    if n_copy <= 0:
+        return
+    dst_start = render_scene.ngeom
+    for k in range(n_copy):
+        _copy_mjv_geom(render_scene.geoms[dst_start + k], user_scene.geoms[k])
+    render_scene.ngeom += n_copy
+
+
+def record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer_handle):
+    """Render one offscreen frame using the current viewer camera and user_scn overlays."""
+    with viewer_handle.lock():
+        mujoco.mjv_updateScene(
+            model,
+            data,
+            viewer_handle.opt,
+            None,
+            viewer_handle.cam,
+            mujoco.mjtCatBit.mjCAT_ALL,
+            record_scene,
+        )
+        _append_user_scene_geoms(record_scene, viewer_handle.user_scn)
+
+    mujoco.mjr_render(record_viewport, record_scene, record_ctx)
+    rgb = np.zeros((VIDEO_HEIGHT, VIDEO_WIDTH, 3), dtype=np.uint8)
+    mujoco.mjr_readPixels(rgb, None, record_viewport, record_ctx)
+    video_writer.append_data(np.flipud(rgb))
 
 # === Setup device ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Comment this out
 # device = torch.device('cpu')  # Force CPU
 print(f"Using device: {device}")
+set_seed(0)
 
 # === Create model instance ===
 rope = WarpRope(
@@ -93,12 +173,40 @@ points = half_dense_then_uniform(
     mode='exp', interval=(0.0, 2.0), plot=False
 )
 
-# Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=True, device=device)  # 5s careful
-# Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
-# Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
-#                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
-plot_goal_traj(Goal_traj, T_task)
+if TRAJ_SHAPE == "sin":
+    Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+elif TRAJ_SHAPE == "egg":
+    Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
+elif TRAJ_SHAPE == "eight":
+    Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=False, device=device)
+elif TRAJ_SHAPE == "spongebob":
+    Goal_traj = build_goal_traj_from_drawn(
+        drawn_path="../my_trajs/SpongeBob.npy",
+        total_horizon=total_horizon-last_point_repeat,
+        device=device, z0=0.2, scale_x=3.0, scale_y=3.0,
+        keep_aspect=False, sigma=0.0, uniform_M=1000,
+        ratio=0.3, sharpness=2.0, interval=(0.0, 2.0)
+    )
+elif TRAJ_SHAPE == "PatrickStar":
+    Goal_traj = build_goal_traj_from_drawn(
+        drawn_path="../my_trajs/PatrickStar.npy",
+        total_horizon=total_horizon-last_point_repeat,
+        device=device, z0=0.2, scale_x=3.0, scale_y=3.0,
+        keep_aspect=False, sigma=0.0, uniform_M=1000,
+        ratio=0.3, sharpness=2.0, interval=(0.0, 2.0)
+    )
+elif TRAJ_SHAPE == "flower":
+    Goal_traj = build_goal_traj_from_drawn(
+        drawn_path="../my_trajs/flower.npy",
+        total_horizon=total_horizon-last_point_repeat,
+        device=device, z0=0.2, scale_x=3.0, scale_y=3.0,
+        keep_aspect=False, sigma=0.0, uniform_M=1000,
+        ratio=0.3, sharpness=2.0, interval=(0.0, 2.0)
+    )
+else:
+    raise ValueError(f"Unknown TRAJ_SHAPE={TRAJ_SHAPE!r}. Choose one of: sin, egg, eight, PatrickStar, spongebob, flower")
+
+# plot_goal_traj(Goal_traj, T_task)  # 录屏脚本默认不弹出轨迹图
 
 # # === 2. Draw Traj ===
 # Goal_traj = build_goal_traj_from_drawn(
@@ -151,7 +259,7 @@ vel = torch.zeros((1, P, 3), device=device)
 with viewer.launch_passive(model, data) as viewer:
     # launch_passive means all the simulation should be done by the user
 
-    cam_setting(viewer, fixed=True, tracking=True)
+    cam_setting(viewer, fixed=False)
     viewer.showinfo = True  # 启动时就显示 info（等同于自动 F2）
 
     goal_his = []
@@ -173,6 +281,39 @@ with viewer.launch_passive(model, data) as viewer:
     traj_drawer = TrajDrawer(viewer, goal_traj=Goal_traj.cpu(),
                              K=k_cand, H=horizon, m=m_modes,
                              draw_candidates=True, draw_modes=True)
+
+    video_writer = None
+    gl_ctx = None
+    record_scene = None
+    record_ctx = None
+    record_viewport = None
+    next_frame_time = 0.0
+    frame_interval = 1.0 / VIDEO_FPS
+
+    if RECORD_VIDEO:
+        VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+        video_writer = imageio.get_writer(
+            VIDEO_PATH,
+            fps=VIDEO_FPS,
+            codec="libx264",
+            macro_block_size=1,
+            output_params=[
+                "-b:v", "12M",
+                "-maxrate", "12M",
+                "-bufsize", "24M",
+                "-pix_fmt", "yuv420p",
+            ],
+        )
+        gl_ctx = mujoco.GLContext(VIDEO_WIDTH, VIDEO_HEIGHT)
+        gl_ctx.make_current()
+        record_scene = mujoco.MjvScene(model, maxgeom=20000)
+        record_ctx = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        record_viewport = mujoco.MjrRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT)
+
+    viewer.sync()
+    if RECORD_VIDEO:
+        record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer)
+        next_frame_time += frame_interval
 
     task_t_start = time.perf_counter()
 
@@ -226,6 +367,12 @@ with viewer.launch_passive(model, data) as viewer:
 
             mujoco.mj_step(model, data)
 
+            # 按仿真时间采样，保证视频为 1x 速度、60 fps。
+            if RECORD_VIDEO:
+                while data.time + 1e-12 >= next_frame_time:
+                    record_frame(record_scene, record_ctx, record_viewport, video_writer, data, viewer)
+                    next_frame_time += frame_interval
+
         viewer.sync()  # let viewer show updated info
 
         goal_his.append(global_goal_action_pos)
@@ -238,6 +385,15 @@ with viewer.launch_passive(model, data) as viewer:
 
         # Update policy
         planner.update_policy()
+
+    if video_writer is not None:
+        video_writer.close()
+    if record_ctx is not None:
+        record_ctx.free()
+    if gl_ctx is not None:
+        gl_ctx.free()
+    if RECORD_VIDEO:
+        print(f"Saved tracking video to: {VIDEO_PATH}")
 
 task_t_end = time.perf_counter()
 print("average time on inference: ", torch.tensor(time_record).mean(), "Desired time:", dt * ctr_period)
@@ -269,7 +425,7 @@ plt.title('Action XYZ over Time')
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # === velocity 曲线（保留）===
 vel_history_np = np.stack([
@@ -286,7 +442,7 @@ plt.title('Top Velocity XYZ over Time')
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # pos 轨迹
 tip_pos_history = pos_history[:, 0, :]
@@ -300,7 +456,7 @@ plt.title('Top Point Position XYZ over Time')
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # ================== Check low-level controller performance ==========================
 # 创建时间轴
@@ -349,4 +505,4 @@ ax3.legend()
 plt.tight_layout()
 
 # 显示图形
-plt.show()
+# plt.show()

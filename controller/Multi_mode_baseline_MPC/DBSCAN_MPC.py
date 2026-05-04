@@ -88,6 +88,8 @@ class Planner:
         self.traj_seeds = None
         self.last_dbscan_labels = None
         self.last_good_idx = None
+        self.last_dbscan_scale = None
+        self.last_dbscan_core_fraction = None
         dev_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(":")[0]
         self._profile_uses_cuda = bool(torch.cuda.is_available() and dev_type == "cuda")
         self.last_profile = None
@@ -172,8 +174,20 @@ class Planner:
 
         # Full eps-neighborhood graph. For top_k_good ~= 200 this is cheap.
         dist = torch.cdist(feat, feat, p=2)                       # (K,K), GPU if feat is GPU
+
+        # Keep lightweight DBSCAN diagnostics for eps tuning and to reduce the
+        # effect of tiny pairwise asymmetries when inspecting cluster scales.
+        dist_sym = 0.5 * (dist + dist.transpose(0, 1))
+        pairwise_upper = dist_sym.triu(diagonal=1)
+        pairwise_upper = pairwise_upper[pairwise_upper > 0]
+        if pairwise_upper.numel() > 0:
+            self.last_dbscan_scale = pairwise_upper.median()
+        else:
+            self.last_dbscan_scale = dist.new_tensor(0.0)
+
         neighbors = dist <= self.dbscan_eps                       # (K,K)
         is_core = neighbors.sum(dim=1) >= self.dbscan_min_samples # (K,)
+        self.last_dbscan_core_fraction = is_core.float().mean()
 
         core_idx = torch.where(is_core)[0]
         C = int(core_idx.numel())

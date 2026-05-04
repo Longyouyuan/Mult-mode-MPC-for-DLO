@@ -3,22 +3,22 @@ import mujoco
 import matplotlib.pyplot as plt
 
 
-def cam_setting(viewer, fixed=True):
+def cam_setting(viewer, fixed=True, tracking=False):
     with viewer.lock():
         if fixed:
             # viewer.cam.type = mujoco.mjtCamera.mjCAMERA_USER
-
-            # # 下面是原始参数
-            # viewer.cam.lookat = np.array([0, 0, 0.6])
-            # viewer.cam.elevation = -30.0  # camera rotation around the axis in the plane （仰角）
-            # viewer.cam.azimuth = 90.0  # camera rotation around the camera's vertical axis （方位角)
-            # viewer.cam.distance = 4  # distance from focus point (model.stat.extent is the max limits of the area)
-
-            # 参数for obstacle avoidance vedio
-            viewer.cam.lookat = np.array([0.22305334, 0.96374713, 0.58218506])
-            viewer.cam.elevation = -31.951219512195127  # camera rotation around the axis in the plane （仰角）
-            viewer.cam.azimuth = -174.9999999999997  # camera rotation around the camera's vertical axis （方位角)
-            viewer.cam.distance = 2.4460566243571598  # distance from focus point (model.stat.extent is the max limits of the area)
+            if tracking:
+                # 下面是原始参数
+                viewer.cam.lookat = np.array([0, 0, 0.6])
+                viewer.cam.elevation = -30.0  # camera rotation around the axis in the plane （仰角）
+                viewer.cam.azimuth = 90.0  # camera rotation around the camera's vertical axis （方位角)
+                viewer.cam.distance = 4  # distance from focus point (model.stat.extent is the max limits of the area)
+            else:
+                # 参数for obstacle avoidance vedio
+                viewer.cam.lookat = np.array([0.22305334, 0.96374713, 0.58218506])
+                viewer.cam.elevation = -31.951219512195127  # camera rotation around the axis in the plane （仰角）
+                viewer.cam.azimuth = -174.9999999999997  # camera rotation around the camera's vertical axis （方位角)
+                viewer.cam.distance = 2.4460566243571598  # distance from focus point (model.stat.extent is the max limits of the area)
         else:
             viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
             viewer.cam.fixedcamid = 0

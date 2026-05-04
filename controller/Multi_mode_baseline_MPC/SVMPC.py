@@ -29,9 +29,14 @@ class Planner:
       - self.J_star:      (m,) cost of those representative particles only.
       - self.traj_seeds:  (m,H,3) rollout trajectories of representative particles.
 
-    The default implementation intentionally uses a weak/uniform prior
-    (prior_weight=0.0) because a strong Gaussian prior centered at the weighted
-    mean can collapse all particles and make the controller drift in one direction.
+    Paper-style SV-MPC implementation notes:
+      - posterior gradient follows Algorithm 1 / Eq. 16:
+            grad log posterior = grad log likelihood + grad log prior
+      - particle weights follow Eq. 22:
+            w_i ∝ p(O_tau | theta_i) * q_tilde(theta_i)
+      - q_tilde is represented here as an independent diagonal Gaussian around each
+        shifted particle. This keeps the implementation close to the paper while
+        preserving the original Planner interface.
     """
 
     def __init__(self, rope: WarpRope, cost_fn, dt, ctr_period, horizon, n_sample, n_improve,
@@ -41,7 +46,7 @@ class Planner:
                  grad_noise_scale=None, prior_noise_scale=None,
                  likelihood_type='EU', elite_frac=0.1,
                  kernel_h=None, kernel_min_h=1e-6,
-                 prior_weight=0.0,
+                 prior_weight=1.0,
                  use_weighted_average=False,
                  update_prior_mean=False,
                  update_prior_cov=False,
@@ -101,7 +106,9 @@ class Planner:
         self.best_idx = torch.tensor(0, device=self.device, dtype=torch.long)
         self.best_sequence = torch.zeros((self.horizon, self.action_dim), device=self.device, dtype=torch.float32)
 
-        # Optional Gaussian prior. Disabled by default via prior_weight=0.0.
+        # Paper-style shifted prior q_tilde(theta). We use a diagonal Gaussian
+        # centered at each shifted particle. prior_weight scales the prior term;
+        # prior_weight=1.0 corresponds to the paper objective.
         self.prior_mean = torch.zeros_like(self.seeds)
         self.prior_var = torch.full_like(self.seeds, max(self.prior_noise_scale ** 2, 1e-6))
 
@@ -162,7 +169,7 @@ class Planner:
 
         if self.limits is not None:
             low, high = self.limits
-            self._cand.clamp_(float(low.item()), float(high.item()))
+            self._cand.clamp_(float(low), float(high))
 
         return self._cand
 
@@ -260,11 +267,31 @@ class Planner:
 
     # ------------------------------------------------------------
     @torch.no_grad()
+    def _log_prior_density(self, theta=None):
+        """
+        Log density of the shifted prior q_tilde(theta).
+
+        Paper Algorithm 1 uses q_tilde_t(theta_i) in both:
+          1) grad log posterior = grad log likelihood + grad log q_tilde
+          2) w_i ∝ p(O_tau | theta_i) q_tilde(theta_i)
+
+        Here q_tilde is represented as a diagonal Gaussian with one component
+        centered at each particle's shifted prior_mean.
+        """
+        if theta is None:
+            theta = self.seeds
+        var = self.prior_var + 1e-12
+        diff = theta - self.prior_mean
+        logp = -0.5 * (diff * diff / var + torch.log(var))
+        return logp.sum(dim=(1, 2))
+
+    # ------------------------------------------------------------
+    @torch.no_grad()
     def _prior_gradient(self):
-        # Correct Gaussian log-prior gradient: grad log N(theta; mu, var) = -(theta-mu)/var.
+        """grad_theta log q_tilde(theta) for diagonal Gaussian prior."""
         if self.prior_weight == 0.0:
             return torch.zeros_like(self.seeds)
-        return -(self.seeds - self.prior_mean) / (self.prior_var + 1e-12)
+        return self.prior_weight * (-(self.seeds - self.prior_mean) / (self.prior_var + 1e-12))
 
     # ------------------------------------------------------------
     @torch.no_grad()
@@ -305,11 +332,40 @@ class Planner:
 
     # ------------------------------------------------------------
     @torch.no_grad()
-    def _particle_weights_from_cost(self, particle_cost):
-        temp = max(self.lambda_, self.min_weight_temp)
-        score = -self.alpha * particle_cost / temp
-        score = score - score.max()
-        w = torch.exp(score)
+    def _log_likelihood_from_cost(self, cost):
+        """
+        log p(O_tau | theta) up to an additive constant.
+
+        For EU likelihood in the paper: L(tau)=exp(-alpha*C).
+        The existing code keeps lambda_ as a temperature for compatibility;
+        set lambda_=1.0 for the literal paper form.
+
+        For PLC, use a low-cost indicator. At particle-evaluation time this is
+        approximated by assigning equal likelihood to the elite particles.
+        """
+        if self.likelihood_type == "EU":
+            temp = max(self.lambda_, self.min_weight_temp)
+            return -self.alpha * cost / temp
+
+        # PLC over representative particles: elite particles get equal nonzero likelihood.
+        n_elite = max(1, int(np.ceil(self.elite_frac * self.m)))
+        elite_idx = torch.topk(cost, n_elite, largest=False).indices
+        log_lik = torch.full_like(cost, -float("inf"))
+        log_lik[elite_idx] = -np.log(float(n_elite))
+        return log_lik
+
+    # ------------------------------------------------------------
+    @torch.no_grad()
+    def _particle_weights_from_cost_and_prior(self, particle_cost):
+        """
+        Paper Eq. 22 style weights:
+            w_i ∝ p(O_tau | theta_i; x_t) * q_tilde_t(theta_i)
+        """
+        log_lik = self._log_likelihood_from_cost(particle_cost)
+        log_prior = self._log_prior_density(self.seeds)
+        logw = log_lik + self.prior_weight * log_prior
+        logw = logw - torch.max(logw)
+        w = torch.exp(logw)
         return w / (w.sum() + 1e-12)
 
     # ------------------------------------------------------------
@@ -357,12 +413,12 @@ class Planner:
 
             grad_lik = self._likelihood_gradient(sample_actions, sample_cost)
             grad_prior = self._prior_gradient()
-            phi = self._svgd_phi(grad_lik + self.prior_weight * grad_prior)
+            phi = self._svgd_phi(grad_lik + grad_prior)
 
             self.seeds.add_(self.svgd_step_size * phi)
             if self.limits is not None:
                 low, high = self.limits
-                self.seeds.clamp_(float(low.item()), float(high.item()))
+                self.seeds.clamp_(float(low), float(high))
 
             last_tip_traj = batch_tip_traj.detach()
             last_cost = cost.detach()
@@ -370,13 +426,25 @@ class Planner:
             profile["multimodal"] += time.perf_counter() - t0
 
         # Final cost of representative particles only.
+        # This is part of multi-modal posterior inference / particle evaluation.
+        # _evaluate_controls internally calls rollout+cost and would normally add to
+        # profile["rollout"] and profile["cost"].  For profiling semantics here,
+        # move this final particle-evaluation time into profile["multimodal"] instead.
+        eval_rollout_before = profile["rollout"]
+        eval_cost_before = profile["cost"]
+        self._sync_profile_timer()
+        eval_t0 = time.perf_counter()
         particle_traj, particle_cost = self._evaluate_controls(pos, vel, self.seeds, goal, Obs=Obs)
+        self._sync_profile_timer()
+        profile["multimodal"] += time.perf_counter() - eval_t0
+        profile["rollout"] = eval_rollout_before
+        profile["cost"] = eval_cost_before
 
         self._sync_profile_timer()
         t0 = time.perf_counter()
         self.particle_cost = particle_cost.detach().clone()
         self.J_star.copy_(self.particle_cost)
-        self.particle_weights = self._particle_weights_from_cost(self.particle_cost).detach().clone()
+        self.particle_weights = self._particle_weights_from_cost_and_prior(self.particle_cost).detach().clone()
         self.best_idx = torch.argmin(self.J_star)
 
         if self.use_weighted_average:
@@ -594,8 +662,8 @@ if __name__ == "__main__":
         m_modes=m_modes, top_k_good=top_k_good, beta=beta, wJ=wJ,
         alpha=alpha, lambda_=lambda_, svgd_step_size=svgd_step_size,
         likelihood_type=likelihood_type,
-        prior_weight=0.0,
-        update_prior_mean=False,
+        prior_weight=1.0,
+        update_prior_mean=True,
         use_weighted_average=False
     )
 

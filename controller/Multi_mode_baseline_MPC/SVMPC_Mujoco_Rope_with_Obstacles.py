@@ -48,7 +48,7 @@ n_sample = 402 * 1
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 1
+n_improve = 2
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
@@ -66,7 +66,7 @@ alpha = 5.0
 lambda_ = 1.0
 svgd_step_size = 1.0
 likelihood_type = 'EU'      # 'EU' or 'PLC'
-prior_weight = 0.0          # 建议默认 0，避免 particles 被 prior 拉塌
+prior_weight = 0.001          # 建议默认 0，避免 particles 被 prior 拉塌
 update_prior_mean = False
 update_prior_cov = False
 use_weighted_average = False
@@ -76,7 +76,7 @@ visualization = True
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
-set_seed(1)
+set_seed(0)
 
 # ===================== Rope model instance =====================
 rope = WarpRope(
@@ -112,7 +112,7 @@ eight_inf = build_infinite_eight(
 
 # For visualization over this 5s task window (not necessary for control)
 Goal_traj = eight_inf.get_range(start=warm_step, length=total_horizon + 1)  # (total_horizon+1,3)
-plot_goal_traj(Goal_traj, T_task)
+# plot_goal_traj(Goal_traj, T_task)
 
 # ===================== Planner =====================
 planner = Planner(
@@ -226,8 +226,8 @@ with viewer.launch_passive(model, data) as viewer:
     # TrajDrawer still uses a finite window for drawing (Goal_traj over 5s)
     traj_drawer = TrajDrawer(
         viewer, goal_traj=Goal_traj.cpu(),
-        K=k_cand, H=horizon, m=m_modes,
-        draw_candidates=True, draw_modes=True
+        K=False, H=horizon, m=m_modes,
+        draw_candidates=False, draw_modes=True
     )
 
     task_t_start = time.perf_counter()

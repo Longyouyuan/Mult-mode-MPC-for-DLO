@@ -29,7 +29,7 @@
     <texture name="texplane" type="2d" builtin="checker" rgb1=".45 .45 .45" rgb2=".2 0.2 0.2"
       width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
 
-    <material name="matplane" reflectance="0.5" texture="texplane" texrepeat="3 3" texuniform="true"/>
+    <material name="matplane" reflectance="0.0" texture="texplane" texrepeat="3 3" texuniform="true"/>
   </asset>
 
   <worldbody>
