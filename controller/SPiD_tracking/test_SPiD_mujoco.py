@@ -115,7 +115,7 @@ k_bend = [0.0006712] * (N - 1)
 damping_bend = [0.000401] * (N - 1)
 air_drag = 0.2206
 g = 10.07
-T_task = 6.0
+T_task = 4.0
 total_steps = int(T_task / dt)
 mode = 'vel'
 
@@ -123,14 +123,14 @@ ctr_period = 10
 pre_length = 75
 hidden_width = 512
 max_action = 1.5
-alpha = 0.1
+alpha = 1.0
 smart = True
 record_interval = 10
 last_point_repeat = 100 * 0
 total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
 model_name = f'trained_tracking_controller_cp{ctr_period}_pre{pre_length}_{mode}_ma{max_action}_N{N}_L{L}_ctr_smart_right.pt'
-# model_name = 'trained_directfit_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct18.pt'
+model_name = 'trained_directfit_simple9_controller_cp10_pre75_vel_ma1.5_N20_L1.0_direct9.pt'
 
 # === Setup device ===
 device = torch.device('cpu')

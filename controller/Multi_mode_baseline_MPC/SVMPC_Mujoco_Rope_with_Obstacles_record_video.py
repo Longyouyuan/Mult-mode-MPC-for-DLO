@@ -68,7 +68,7 @@ wJ = 1.5
 # n_sample 是所有 particles 周围的总 Monte-Carlo rollout 数，要求 n_sample % m_modes == 0
 alpha = 5.0
 lambda_ = 1.0
-svgd_step_size = 1.0
+svgd_step_size = 2.0
 likelihood_type = 'EU'      # 'EU' or 'PLC'
 prior_weight = 0.001          # 建议默认 0，避免 particles 被 prior 拉塌
 update_prior_mean = False
@@ -472,6 +472,14 @@ def print_timing_stats(name, values):
     print(f"{name}: mean={mean_s:.6f} s ({mean_s * 1000.0:.3f} ms), var={var_s2:.6e} s^2")
 
 
+def rmse_cm_xy(endpoint, goal):
+    endpoint_t = torch.as_tensor(endpoint, dtype=torch.float64)
+    goal_t = torch.as_tensor(goal, dtype=torch.float64)
+    t_len = min(endpoint_t.shape[0], goal_t.shape[0])
+    err = endpoint_t[:t_len, :2] - goal_t[:t_len, :2]
+    return torch.sqrt(torch.mean(torch.sum(err ** 2, dim=1))).item() * 100.0
+
+
 def save_profile_records(path, records):
     keys = ("improve", "rollout", "cost", "multimodal", "overhead")
     arrays = {
@@ -498,6 +506,11 @@ save_profile_records(DATA_DIR / "svmpc_profile_records.npz", profile_records)
 
 # ===================== Save trajectory data only =====================
 pos_history = torch.cat(pos_history, dim=0)
+Goal_run = eight_inf.get_range(start=1, length=pos_history.shape[0] + 1)
+tip_traj = pos_history[:, -1, :]
+rmse_cm = rmse_cm_xy(tip_traj, Goal_run[:tip_traj.shape[0]])
+print(f"Final tracking RMSE (xy): {rmse_cm:.3f} cm")
+
 if RECORD_DATA:
     np.save(DATA_DIR / "svmpc_rope_traj.npy", pos_history.cpu().numpy())
     print(f"Saved rope trajectory to: {DATA_DIR / 'svmpc_rope_traj.npy'}")

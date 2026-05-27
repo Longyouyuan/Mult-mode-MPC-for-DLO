@@ -57,6 +57,20 @@ def build_model_from_checkpoint(ckpt: Dict, device: torch.device) -> tuple[Spars
 	return model, ckpt_args
 
 
+def summarize_goal_vs_ee_metrics(dataset: FrankaSparseWindowDataset, batch_size: int) -> Dict[str, float]:
+	loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+	window_max_pos_errs = []
+	for batch in loader:
+		pos_err_norm = torch.linalg.norm(batch["goal_p_future"] - batch["target_p"], dim=-1)
+		window_max_pos_errs.append(pos_err_norm.max(dim=1).values)
+	if not window_max_pos_errs:
+		raise ValueError("Dataset is empty, cannot compute goal-vs-ee metrics.")
+	avg_max_pos_err = torch.cat(window_max_pos_errs).mean()
+	return {
+		"avg_max_pos_err": float(avg_max_pos_err.detach().cpu()),
+	}
+
+
 def main():
 	args = parse_args()
 	make_output_dir(args.out_dir)
@@ -97,12 +111,16 @@ def main():
 		print(f"  test samples ({name}): {len(tds)}")
 
 	all_test_metrics = {}
+	all_goal_vs_ee_metrics = {}
 	all_test_plots = {}
 	for name, (_, tds) in test_datasets.items():
 		tloader = DataLoader(tds, batch_size=batch_size, shuffle=False, num_workers=0)
 		t_metrics = evaluate(model, tloader, device)
+		goal_vs_ee_metrics = summarize_goal_vs_ee_metrics(tds, batch_size=batch_size)
 		all_test_metrics[name] = t_metrics
+		all_goal_vs_ee_metrics[name] = goal_vs_ee_metrics
 		print(f"Test [{name}]: avg_max_pos_err={t_metrics['avg_max_pos_err']:.6f}")
+		print(f"Goal-vs-EE [{name}]: avg_max_pos_err={goal_vs_ee_metrics['avg_max_pos_err']:.6f}")
 
 		plot_dir = os.path.join(args.out_dir, f"test_rollout_{name}")
 		t_plot = save_rollout_plot(
@@ -138,6 +156,7 @@ def main():
 			f"test_{name}": len(tds) for name, (_, tds) in test_datasets.items()
 		},
 		"test_metrics": all_test_metrics,
+		"goal_vs_ee_metrics": all_goal_vs_ee_metrics,
 		"visualization": {
 			f"test_{name}": tp for name, tp in all_test_plots.items()
 		},

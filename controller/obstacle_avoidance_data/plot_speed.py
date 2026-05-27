@@ -28,6 +28,13 @@ WARMUP_STEPS = 1
 N_EXAMPLE_POINTS = 12
 SCATTER_JITTER = 0.22
 SCATTER_SEED = 7
+PRINT_KEYS = (
+    ("improve", "total"),
+    ("rollout", "rollout"),
+    ("cost", "cost"),
+    ("multimodal", "inference"),
+    ("overhead", "overhead"),
+)
 
 
 def set_paper_style():
@@ -65,6 +72,30 @@ def load_timing_ms(path, key=TIME_KEY, warmup_steps=WARMUP_STEPS):
         raise ValueError(f"No finite timing samples in {path.name}.")
 
     return timing * 1000.0
+
+
+def load_profile_metrics_ms(path, warmup_steps=WARMUP_STEPS):
+    if not path.exists():
+        raise FileNotFoundError(f"Missing timing file: {path}")
+
+    records = np.load(path)
+    metrics = {}
+    for key, _ in PRINT_KEYS:
+        if key not in records.files:
+            continue
+
+        timing = np.asarray(records[key], dtype=np.float64)
+        if warmup_steps > 0:
+            timing = timing[warmup_steps:]
+        timing = timing[np.isfinite(timing)]
+        if timing.size == 0:
+            continue
+        metrics[key] = timing * 1000.0
+
+    if TIME_KEY not in metrics:
+        raise KeyError(f"{path.name} has keys {records.files}, but '{TIME_KEY}' was not available after filtering.")
+
+    return metrics
 
 
 def summarize(values_ms):
@@ -190,9 +221,11 @@ def main():
 
     timing_by_method = []
     for label, path, color, hatch in PROFILE_FILES:
+        metrics_ms = load_profile_metrics_ms(path)
         timing_by_method.append({
             "label": label,
-            "values_ms": load_timing_ms(path),
+            "values_ms": metrics_ms[TIME_KEY],
+            "metrics_ms": metrics_ms,
             "color": color,
             "hatch": hatch,
         })
@@ -209,6 +242,23 @@ def main():
             f" {stat['mean']:10.3f} {stat['std']:9.3f} {stat['var']:11.3f}"
             f" {stat['min']:9.3f} {stat['max']:9.3f}"
         )
+
+    print("\nDetailed timing breakdown (ms):")
+    for item in timing_by_method:
+        label = item["label"].replace("\n", "-")
+        print(f"[{label}]")
+        print("component        mean(ms)   std(ms)   min(ms)   max(ms)")
+        for key, display_name in PRINT_KEYS:
+            if key not in item["metrics_ms"]:
+                continue
+            stat = summarize(item["metrics_ms"][key])
+            print(
+                f"{display_name:<14s}"
+                f" {stat['mean']:10.3f} {stat['std']:9.3f}"
+                f" {stat['min']:9.3f} {stat['max']:9.3f}"
+            )
+        print()
+
     print(f"Saved figures to: {DATA_DIR}")
     print("- obstacle_avoidance_planning_time_compare.pdf/png")
 

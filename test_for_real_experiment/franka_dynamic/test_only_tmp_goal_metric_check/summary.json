@@ -1,0 +1,81 @@
+{
+  "ckpt": "./franka_dynamic/finetune_real_data/best_model.pt",
+  "csv_test": [
+    "./franka_data\\real_data_eight_20260416_222916.csv",
+    "./franka_data\\real_data_eight_20260416_223121.csv"
+  ],
+  "eval_settings": {
+    "dt_ms": 1.0,
+    "hist_len": 1,
+    "hist_stride": 10,
+    "horizon": 750,
+    "stride": 20,
+    "batch_size": 128
+  },
+  "dataset_sizes": {
+    "test_real_data_eight_20260416_222916": 211,
+    "test_real_data_eight_20260416_223121": 211
+  },
+  "test_metrics": {
+    "real_data_eight_20260416_222916": {
+      "loss": 0.00012000696005998179,
+      "one_step_p": 1.0498824920546213e-08,
+      "one_step_v": 3.8366827084246324e-06,
+      "roll_p": 2.6147165499423863e-06,
+      "roll_v": 0.00010309144272468984,
+      "avg_max_pos_err": 0.00426225655246526
+    },
+    "real_data_eight_20260416_223121": {
+      "loss": 0.00013177139044273645,
+      "one_step_p": 4.807563680486737e-09,
+      "one_step_v": 2.719138592510717e-06,
+      "roll_p": 2.801478899527865e-06,
+      "roll_v": 0.00011504245412652381,
+      "avg_max_pos_err": 0.004379197722300887
+    }
+  },
+  "goal_vs_ee_metrics": {
+    "real_data_eight_20260416_222916": {
+      "avg_max_pos_err": 0.045659154653549194
+    },
+    "real_data_eight_20260416_223121": {
+      "avg_max_pos_err": 0.041162025183439255
+    }
+  },
+  "visualization": {
+    "test_real_data_eight_20260416_222916": {
+      "out_dir": "./franka_dynamic/test_only_tmp_goal_metric_check\\test_rollout_real_data_eight_20260416_222916",
+      "samples": [
+        {
+          "sample_idx": 0,
+          "file": "sample_00_idx_00000.png",
+          "loss": 0.00022600004740525037,
+          "avg_max_pos_err": 0.0061440360732376575,
+          "max_pos_err": 0.0061440360732376575,
+          "max_vel_err": 0.05728505551815033
+        }
+      ]
+    },
+    "test_real_data_eight_20260416_223121": {
+      "out_dir": "./franka_dynamic/test_only_tmp_goal_metric_check\\test_rollout_real_data_eight_20260416_223121",
+      "samples": [
+        {
+          "sample_idx": 0,
+          "file": "sample_00_idx_00000.png",
+          "loss": 0.0001416191371390596,
+          "avg_max_pos_err": 0.005210548173636198,
+          "max_pos_err": 0.005210548173636198,
+          "max_vel_err": 0.037610746920108795
+        }
+      ]
+    }
+  },
+  "model_summary": {
+    "acc_mean": [
+      0.10058515518903732,
+      -0.421124666929245,
+      0.08385682106018066
+    ]
+  },
+  "benchmark_ms": 232.13210000000026
+}

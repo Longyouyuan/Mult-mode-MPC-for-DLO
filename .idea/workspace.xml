@@ -2,8 +2,102 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8c6d3ffd-9a60-4be1-b58a-3554537b658d" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/animate_infer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/animate_tracking_3d.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/eight_obs/frames/clip.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/data/spid/plot_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/plot_traj_tracking.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/vedio/time_lapse_multi.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/real_exp_data/vedio/time_lapse_traj.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles_record_video.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles_record_video.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_lstm_stage1_rollout100.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_lstm_stage2_rollout300.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage1_rollout100.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage2_rollout200.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage3_rollout400.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage4_rollout600.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage5_rollout800.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage6_rollout1000.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage7_rollout1200.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/disturbance_data/disturbance_tracking_error.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/disturbance_data/disturbance_tracking_error.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/disturbance_data/disturbance_trajectory_3d.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/disturbance_data/disturbance_trajectory_3d.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_profile_records.npz" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_profile_records.npz" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_rope_traj.npy" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_rope_traj.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/OneDrive_1_2026-4-22.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/ablation/paper_data_continuous_eight_ablation.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/continuous_eight/paper_data_continuous_eight_1.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_1.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_2.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_3.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_1.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_2.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_3.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_4.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_5.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/plot_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_1.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_2.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_3.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_4.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/first-obs/readme.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/second-obs/readme.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/shotcut/m2pc_shotcut/m2pc_shotcut 2026-04-23T18-24-01.mlt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/shotcut/m2pc_shotcut/m2pc_shotcut.mlt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/report.pptx" beforeDir="false" afterPath="$PROJECT_DIR$/report.pptx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/summary.json" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/summary.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_00_idx_00000.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_01_idx_00007.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_01_idx_00007.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_02_idx_00019.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_02_idx_00019.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_03_idx_00029.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_03_idx_00029.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_04_idx_00050.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_04_idx_00050.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_05_idx_00053.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_05_idx_00053.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_06_idx_00056.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_06_idx_00056.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_07_idx_00063.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_07_idx_00063.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_08_idx_00085.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_08_idx_00085.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_09_idx_00086.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_09_idx_00086.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_10_idx_00091.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_10_idx_00091.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_11_idx_00099.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_11_idx_00099.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_12_idx_00115.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_12_idx_00115.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_13_idx_00134.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_13_idx_00134.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_14_idx_00147.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_14_idx_00147.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_15_idx_00163.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_15_idx_00163.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_16_idx_00170.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_16_idx_00170.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_17_idx_00176.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_17_idx_00176.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_18_idx_00186.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_18_idx_00186.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_19_idx_00189.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_19_idx_00189.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_00_idx_00000.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_01_idx_00007.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_01_idx_00007.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_02_idx_00019.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_02_idx_00019.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_03_idx_00029.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_03_idx_00029.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_04_idx_00050.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_04_idx_00050.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_05_idx_00053.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_05_idx_00053.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_06_idx_00056.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_06_idx_00056.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_07_idx_00063.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_07_idx_00063.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_08_idx_00085.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_08_idx_00085.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_09_idx_00086.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_09_idx_00086.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_10_idx_00091.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_10_idx_00091.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_11_idx_00099.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_11_idx_00099.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_12_idx_00115.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_12_idx_00115.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_13_idx_00134.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_13_idx_00134.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_14_idx_00147.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_14_idx_00147.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_15_idx_00163.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_15_idx_00163.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_16_idx_00170.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_16_idx_00170.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_17_idx_00176.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_17_idx_00176.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_18_idx_00186.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_18_idx_00186.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_19_idx_00189.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_19_idx_00189.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_model_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_model_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,7 +118,6 @@
     <setting file="file://$PROJECT_DIR$/common/utils.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/my_trajs/draw_traj.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/real_exp_data/data/plot_data.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test_for_real_experiment/franka_data_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test_for_real_experiment/franka_model_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test_for_real_experiment/warp_rope_franka_model.py" root0="FORCE_HIGHLIGHTING" />
@@ -37,90 +130,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "last_opened_file_path": "E:/Desktop/Rope Manipulatioin 3D"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/Desktop/Rope Manipulatioin 3D&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\common" />
       <recent name="C:\Users\long\Desktop\Mult-mode-MPC-for-DLO\Mujoco_env" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\real_exp_data\data\m2pc" />
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\real_exp_data" />
+      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\real_exp_data\vedio" />
       <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller" />
       <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\obstacle_avoidance_data" />
-      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\Multi_mode_baseline_MPC" />
-      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\tracking_data" />
-      <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\SPiD_tracking" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.SPiD_training_real">
-    <configuration name="M2PC_Mujoco_Rope_Tracking" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Mult-mode MPC for DLO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="M2PC_Mujoco_Rope_Tracking_record_video" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Mult-mode MPC for DLO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking_record_video.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="SPiD_training_real" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Mult-mode MPC for DLO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/real_rope_SPiD" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/real_rope_SPiD/SPiD_training_real.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.test_SPiD_mujoco">
     <configuration name="plot_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -129,11 +159,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/obstacle_avoidance_data" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/real_exp_data/data/m2pc" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_data.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/real_exp_data/data/m2pc/plot_data.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -142,7 +172,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="plot_speed" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="plot_paper" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -150,11 +180,74 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/obstacle_avoidance_data" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/disturbance_data" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/disturbance_data/plot_paper.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="plot_traj_tracking" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Mult-mode MPC for DLO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/real_exp_data" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/real_exp_data/plot_traj_tracking.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_SPiD_mujoco" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Mult-mode MPC for DLO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/SPiD_tracking" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="training_SPid_2_only_simple" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Mult-mode MPC for DLO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/SPiD_tracking" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/SPiD_tracking/training_SPid_2_only_simple.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -165,11 +258,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.SPiD_training_real" />
-        <item itemvalue="Python.M2PC_Mujoco_Rope_Tracking_record_video" />
-        <item itemvalue="Python.M2PC_Mujoco_Rope_Tracking" />
+        <item itemvalue="Python.test_SPiD_mujoco" />
+        <item itemvalue="Python.training_SPid_2_only_simple" />
+        <item itemvalue="Python.plot_paper" />
         <item itemvalue="Python.plot_data" />
-        <item itemvalue="Python.plot_speed" />
+        <item itemvalue="Python.plot_traj_tracking" />
       </list>
     </recent_temporary>
   </component>
@@ -279,11 +372,6 @@
           <option name="timeStamp" value="163" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py</url>
-          <line>286</line>
-          <option name="timeStamp" value="165" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller/M2PC_Mujoco_Rope_Tracking.py</url>
           <line>247</line>
           <option name="timeStamp" value="166" />
@@ -295,7 +383,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles_record_video.py</url>
-          <line>494</line>
+          <line>502</line>
           <option name="timeStamp" value="198" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -305,7 +393,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py</url>
-          <line>94</line>
+          <line>125</line>
           <option name="timeStamp" value="201" />
         </line-breakpoint>
       </breakpoints>

@@ -20,6 +20,10 @@ DPI = 600
 FIG_SCALE = 1.45
 FIGSIZE_TRAJ = (2.25 * FIG_SCALE, 1.85 * FIG_SCALE)
 FIGSIZE_ERR = (2.35 * FIG_SCALE, 1.65 * FIG_SCALE)
+FIGSIZE_RMSE = (1.0, 1.22)
+RMSE_FONT_SIZE = 7
+RMSE_TICK_SIZE = 6.5
+RMSE_LINE_WIDTH = 0.65
 FONT_SIZE = 8
 TICK_SIZE = 8
 LEGEND_SIZE = 7
@@ -84,6 +88,12 @@ def align_to_goal(goal, *tips):
     return (goal[:t_len],) + tuple(tip[:t_len] for tip in tips)
 
 
+def rmse_cm(traj, goal):
+    t_len = min(goal.shape[0], traj.shape[0])
+    err = traj[:t_len, :2] - goal[:t_len, :2]
+    return float(np.sqrt(np.mean(np.sum(err ** 2, axis=1))) * 100.0)
+
+
 def set_data_bounds_2d(ax, *point_sets, margin=0.10):
     """Fit axis limits to actual data extent + margin. horizontal=y, vertical=x."""
     pts = np.concatenate([p[:, :2] for p in point_sets], axis=0)
@@ -94,9 +104,9 @@ def set_data_bounds_2d(ax, *point_sets, margin=0.10):
     ax.set_aspect("equal", adjustable="box")
 
 
-def save_figure(fig, stem):
-    fig.savefig(DATA_DIR / f"{stem}.pdf", bbox_inches="tight", pad_inches=0.04)
-    fig.savefig(DATA_DIR / f"{stem}.png", dpi=DPI, bbox_inches="tight", pad_inches=0.04)
+def save_figure(fig, stem, pad_inches=0.04):
+    fig.savefig(DATA_DIR / f"{stem}.pdf", bbox_inches="tight", pad_inches=pad_inches)
+    fig.savefig(DATA_DIR / f"{stem}.png", dpi=DPI, bbox_inches="tight", pad_inches=pad_inches)
 
 
 def plot_xy_trajectory(goal, m2pc, svmpc, dbscan):
@@ -184,6 +194,85 @@ def plot_tracking_error(goal, m2pc, svmpc, dbscan):
     return fig
 
 
+def plot_rmse_bar(m2pc_rmse, svmpc_rmse, dbscan_rmse):
+    labels = ["M2PC", "C-MPPI", "SVMPC"]
+    values = np.asarray([m2pc_rmse, dbscan_rmse, svmpc_rmse], dtype=np.float64)
+    colors = ["#d62728", "#2ca02c", "#1f77b4"]
+    hatches = ["", "////", "\\\\"]
+    x = np.arange(len(labels), dtype=np.float64)
+
+    rmse_style = {
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+        "font.size": RMSE_FONT_SIZE,
+        "axes.labelsize": RMSE_FONT_SIZE,
+        "xtick.labelsize": RMSE_TICK_SIZE,
+        "ytick.labelsize": RMSE_TICK_SIZE,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "axes.linewidth": RMSE_LINE_WIDTH,
+        "xtick.major.width": RMSE_LINE_WIDTH,
+        "ytick.major.width": RMSE_LINE_WIDTH,
+        "xtick.major.size": 2.2,
+        "ytick.major.size": 2.2,
+        "hatch.linewidth": 0.35,
+    }
+
+    with plt.rc_context(rmse_style):
+        fig, ax = plt.subplots(figsize=FIGSIZE_RMSE)
+
+        bars = ax.bar(
+            x,
+            values,
+            width=0.56,
+            color=colors,
+            edgecolor="0.12",
+            linewidth=0.45,
+            zorder=2,
+        )
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+
+        label_offset = max(0.45, 0.025 * float(np.max(values)))
+        label_positions = []
+        for i, value in enumerate(values):
+            label_y = value + label_offset
+            label_positions.append(label_y)
+            ax.text(
+                x[i],
+                label_y,
+                f"{value:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=RMSE_TICK_SIZE,
+                color="0.12",
+                zorder=4,
+            )
+
+        ax.set_ylabel("RMSE (cm)", labelpad=1.0)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=90, va="top")
+        ax.tick_params(axis="x", pad=1.0)
+        ax.tick_params(axis="y", pad=1.0)
+        ax.yaxis.set_major_locator(MaxNLocator(4))
+        ax.grid(axis="y", linewidth=0.25, alpha=0.42)
+        ax.set_axisbelow(True)
+
+        y_max = max(float(np.max(values)), max(label_positions))
+        y_pad = max(0.6, 0.04 * y_max)
+        ax.set_ylim(0.0, y_max + y_pad)
+        ax.margins(x=0.08)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        for spine in ax.spines.values():
+            spine.set_linewidth(RMSE_LINE_WIDTH)
+
+        fig.tight_layout(pad=0.08)
+        save_figure(fig, "obstacle_avoidance_rmse_compare", pad_inches=0.015)
+        return fig
+
+
 def main():
     set_paper_style()
 
@@ -194,12 +283,22 @@ def main():
 
     goal, m2pc, svmpc, dbscan = align_to_goal(goal, m2pc, svmpc, dbscan)
 
+    m2pc_rmse = rmse_cm(m2pc, goal)
+    svmpc_rmse = rmse_cm(svmpc, goal)
+    dbscan_rmse = rmse_cm(dbscan, goal)
+
     plot_xy_trajectory(goal, m2pc, svmpc, dbscan)
     plot_tracking_error(goal, m2pc, svmpc, dbscan)
+    plot_rmse_bar(m2pc_rmse, svmpc_rmse, dbscan_rmse)
 
     print(f"Saved figures to: {DATA_DIR}")
     print("- obstacle_avoidance_xy_trajectory_compare.pdf/png")
     print("- obstacle_avoidance_tracking_error_compare.pdf/png")
+    print("- obstacle_avoidance_rmse_compare.pdf/png")
+    print("RMSE in xy plane (cm):")
+    print(f"- M2PC: {m2pc_rmse:.3f}")
+    print(f"- SVMPC: {svmpc_rmse:.3f}")
+    print(f"- DBSCAN-MPC: {dbscan_rmse:.3f}")
 
 
 if __name__ == "__main__":
