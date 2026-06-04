@@ -2,102 +2,76 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8c6d3ffd-9a60-4be1-b58a-3554537b658d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/animate_infer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/animate_tracking_3d.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/data/m2pc/eight_obs/frames/clip.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/data/spid/plot_data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/plot_traj_tracking.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/vedio/time_lapse_multi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_exp_data/vedio/time_lapse_traj.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles_record_video.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/Multi_mode_baseline_MPC/SVMPC_Mujoco_Rope_with_Obstacles_record_video.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/MUJOCO_LOG.TXT" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_lstm_stage1_rollout100.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_lstm_stage2_rollout300.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage1_rollout100.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage2_rollout200.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage3_rollout400.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage4_rollout600.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage5_rollout800.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage6_rollout1000.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/ckpt_unilstm_stage7_rollout1200.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/SPiD_tracking/test_SPiD_mujoco.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/disturbance_data/disturbance_tracking_error.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/disturbance_data/disturbance_tracking_error.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/disturbance_data/disturbance_trajectory_3d.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/disturbance_data/disturbance_trajectory_3d.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_planning_time_compare.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_tracking_error_compare.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/obstacle_avoidance_xy_trajectory_compare.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/plot_speed.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_profile_records.npz" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_profile_records.npz" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_rope_traj.npy" beforeDir="false" afterPath="$PROJECT_DIR$/controller/obstacle_avoidance_data/svmpc_rope_traj.npy" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/OneDrive_1_2026-4-22.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/ablation/paper_data_continuous_eight_ablation.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/continuous_eight/paper_data_continuous_eight_1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_4s/paper_data_eight_3.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_3.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_4.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/eight_obs/paper_data_continuous_eight_obs_5.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/plot_data.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_1.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_3.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/data/sin_2.5s/paper_data_sin_4.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/first-obs/readme.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/second-obs/readme.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/shotcut/m2pc_shotcut/m2pc_shotcut 2026-04-23T18-24-01.mlt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/real_exp_data/vedio/shotcut/m2pc_shotcut/m2pc_shotcut.mlt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/tracking_data/simulation_traj_tracking.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/controller/tracking_data/simulation_traj_tracking.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller/tracking_data/simulation_traj_tracking.png" beforeDir="false" afterPath="$PROJECT_DIR$/controller/tracking_data/simulation_traj_tracking.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/report.pptx" beforeDir="false" afterPath="$PROJECT_DIR$/report.pptx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/summary.json" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/summary.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_00_idx_00000.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_01_idx_00007.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_01_idx_00007.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_02_idx_00019.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_02_idx_00019.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_03_idx_00029.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_03_idx_00029.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_04_idx_00050.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_04_idx_00050.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_05_idx_00053.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_05_idx_00053.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_06_idx_00056.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_06_idx_00056.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_07_idx_00063.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_07_idx_00063.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_08_idx_00085.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_08_idx_00085.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_09_idx_00086.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_09_idx_00086.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_10_idx_00091.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_10_idx_00091.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_11_idx_00099.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_11_idx_00099.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_12_idx_00115.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_12_idx_00115.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_13_idx_00134.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_13_idx_00134.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_14_idx_00147.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_14_idx_00147.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_15_idx_00163.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_15_idx_00163.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_16_idx_00170.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_16_idx_00170.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_17_idx_00176.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_17_idx_00176.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_18_idx_00186.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_18_idx_00186.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_19_idx_00189.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_222916/sample_19_idx_00189.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_00_idx_00000.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_01_idx_00007.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_01_idx_00007.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_02_idx_00019.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_02_idx_00019.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_03_idx_00029.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_03_idx_00029.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_04_idx_00050.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_04_idx_00050.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_05_idx_00053.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_05_idx_00053.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_06_idx_00056.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_06_idx_00056.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_07_idx_00063.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_07_idx_00063.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_08_idx_00085.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_08_idx_00085.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_09_idx_00086.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_09_idx_00086.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_10_idx_00091.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_10_idx_00091.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_11_idx_00099.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_11_idx_00099.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_12_idx_00115.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_12_idx_00115.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_13_idx_00134.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_13_idx_00134.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_14_idx_00147.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_14_idx_00147.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_15_idx_00163.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_15_idx_00163.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_16_idx_00170.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_16_idx_00170.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_17_idx_00176.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_17_idx_00176.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_18_idx_00186.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_18_idx_00186.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_19_idx_00189.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/test_only/test_rollout_real_data_eight_20260416_223121/sample_19_idx_00189.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_model_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_model_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_00_idx_00000.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_01_idx_00220.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_01_idx_00220.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_02_idx_00542.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_02_idx_00542.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_03_idx_00910.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_03_idx_00910.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_04_idx_01573.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_04_idx_01573.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_05_idx_01624.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_05_idx_01624.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_06_idx_01725.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_06_idx_01725.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_07_idx_01968.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_07_idx_01968.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_08_idx_02585.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_08_idx_02585.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_09_idx_02673.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_09_idx_02673.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_10_idx_02983.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_10_idx_02983.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_11_idx_03227.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_11_idx_03227.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_12_idx_03473.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_12_idx_03473.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_13_idx_04068.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_13_idx_04068.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_14_idx_04761.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_14_idx_04761.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_15_idx_05192.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_15_idx_05192.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_16_idx_05227.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_16_idx_05227.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_17_idx_05486.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_17_idx_05486.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_18_idx_05986.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_18_idx_05986.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_19_idx_05993.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run1/sample_19_idx_05993.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_00_idx_00000.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_01_idx_00215.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_01_idx_00215.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_02_idx_00530.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_02_idx_00530.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_03_idx_00889.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_03_idx_00889.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_04_idx_01536.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_04_idx_01536.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_05_idx_01586.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_05_idx_01586.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_06_idx_01685.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_06_idx_01685.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_07_idx_01923.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_07_idx_01923.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_08_idx_02525.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_08_idx_02525.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_09_idx_02611.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_09_idx_02611.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_10_idx_02913.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_10_idx_02913.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_11_idx_03151.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_11_idx_03151.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_12_idx_03393.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_12_idx_03393.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_13_idx_03974.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_13_idx_03974.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_14_idx_04650.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_14_idx_04650.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_15_idx_05071.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_15_idx_05071.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_16_idx_05106.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_16_idx_05106.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_17_idx_05358.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_17_idx_05358.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_18_idx_05846.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_18_idx_05846.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_19_idx_05853.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/test_rollout_ee_collection_run3/sample_19_idx_05853.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/training_curve.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/training_curve.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_00_idx_00000.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_00_idx_00000.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_01_idx_00078.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_01_idx_00078.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_02_idx_00192.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_02_idx_00192.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_03_idx_00352.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_03_idx_00352.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_04_idx_00821.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_04_idx_00821.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_05_idx_01262.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_05_idx_01262.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_06_idx_01440.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_06_idx_01440.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_07_idx_02359.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_07_idx_02359.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_08_idx_02390.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_08_idx_02390.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_09_idx_02550.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_09_idx_02550.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_10_idx_02627.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_10_idx_02627.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_11_idx_02843.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_11_idx_02843.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_12_idx_02965.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_12_idx_02965.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_13_idx_02977.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_13_idx_02977.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_14_idx_03041.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_14_idx_03041.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_15_idx_03420.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_15_idx_03420.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_16_idx_03807.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_16_idx_03807.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_17_idx_03975.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_17_idx_03975.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_18_idx_04275.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_18_idx_04275.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_19_idx_04549.png" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_dynamic/finetune_real_data/val_rollout/sample_19_idx_04549.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_for_real_experiment/franka_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_for_real_experiment/franka_model.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -150,8 +124,8 @@
       <recent name="E:\Desktop\Mult-mode-MPC-for-DLO\controller\obstacle_avoidance_data" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.test_SPiD_mujoco">
-    <configuration name="plot_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.franka_model">
+    <configuration name="a_plot_paper" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Mult-mode MPC for DLO" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -159,11 +133,32 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/real_exp_data/data/m2pc" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tracking_data" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/real_exp_data/data/m2pc/plot_data.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/tracking_data/a_plot_paper.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="franka_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Mult-mode MPC for DLO" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test_for_real_experiment" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_for_real_experiment/franka_model.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -185,27 +180,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller/disturbance_data/plot_paper.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="plot_traj_tracking" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Mult-mode MPC for DLO" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/real_exp_data" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/real_exp_data/plot_traj_tracking.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -258,11 +232,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.franka_model" />
+        <item itemvalue="Python.a_plot_paper" />
         <item itemvalue="Python.test_SPiD_mujoco" />
         <item itemvalue="Python.training_SPid_2_only_simple" />
         <item itemvalue="Python.plot_paper" />
-        <item itemvalue="Python.plot_data" />
-        <item itemvalue="Python.plot_traj_tracking" />
       </list>
     </recent_temporary>
   </component>

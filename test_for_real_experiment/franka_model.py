@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -17,6 +19,55 @@ DEFAULT_REAL_DATA_EXTRA_GLOB = "./franka_data/real_data*.csv"
 DEFAULT_BASELINE_CKPT = "./franka_dynamic/best_model.pt"
 DEFAULT_FINETUNE_OUT_DIR = "./franka_dynamic_real_data_finetune"
 DEFAULT_RUN2_NAME = "ee_collection_run2.csv"
+
+IEEE_SINGLE_COL_WIDTH = 3.5
+IEEE_TRAIN_FIGSIZE = (IEEE_SINGLE_COL_WIDTH, 2.2)
+IEEE_ROLLOUT_FIGSIZE = (IEEE_SINGLE_COL_WIDTH, 2.75)
+IEEE_FIG_DPI = 600
+IEEE_YLABEL_PAD = 6.0
+IEEE_PLOT_RC = {
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+    "mathtext.fontset": "stix",
+    "font.size": 7.0,
+    "axes.labelsize": 7.0,
+    "axes.titlesize": 7.2,
+    "xtick.labelsize": 6.2,
+    "ytick.labelsize": 6.2,
+    "legend.fontsize": 7.2,
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+    "axes.linewidth": 0.55,
+    "xtick.major.width": 0.5,
+    "ytick.major.width": 0.5,
+    "xtick.major.size": 2.0,
+    "ytick.major.size": 2.0,
+    "lines.solid_capstyle": "round",
+    "lines.dash_capstyle": "round",
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.02,
+}
+IEEE_GRID_STYLE = {
+    "linestyle": "--",
+    "linewidth": 0.35,
+    "alpha": 0.40,
+}
+IEEE_COLORS = {
+    "measured": "#111111",
+    "predicted": "#C23B22",
+    "goal": "#2F7FBF",
+    "pos_error": "#B22222",
+    "vel_error": "#D97706",
+    "train": "#1F77B4",
+    "val": "#D62728",
+}
+
+
+def style_ieee_axis(ax, xbins: int = 4, ybins: int = 4):
+    ax.grid(True, **IEEE_GRID_STYLE)
+    ax.tick_params(axis="both", which="major", pad=1.2)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=xbins))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=ybins))
 
 
 def load_and_resample(csv_path: str, dt_ms: float = 1.0) -> Dict[str, np.ndarray]:
@@ -621,95 +672,146 @@ def save_rollout_plot(model, dataset, device, out_dir: str, title: str, num_samp
     make_output_dir(out_dir)
     sample_indices = sample_rollout_indices(len(dataset), num_samples, seed)
     records = []
+    legend_handles = [
+        Line2D([0], [0], color=IEEE_COLORS["measured"], linewidth=1.0, label="Measured"),
+        Line2D([0], [0], color=IEEE_COLORS["predicted"], linewidth=1.0, linestyle="--", label="Predicted"),
+        Line2D([0], [0], color=IEEE_COLORS["goal"], linewidth=0.95, label="Commanded"),
+    ]
 
-    for plot_idx, sample_idx in enumerate(sample_indices):
-        sample = dataset[int(sample_idx)]
-        batch = {k: v.unsqueeze(0).to(device) for k, v in sample.items()}
+    with plt.rc_context(IEEE_PLOT_RC):
+        for plot_idx, sample_idx in enumerate(sample_indices):
+            sample = dataset[int(sample_idx)]
+            batch = {k: v.unsqueeze(0).to(device) for k, v in sample.items()}
 
-        pred_p, pred_v, _ = model.rollout(
-            batch["ee_p_hist"],
-            batch["ee_v_hist"],
-            batch["goal_p_hist"],
-            batch["goal_v_hist"],
-            batch["goal_p_future"],
-            batch["goal_v_future"],
-        )
-        _, sample_metrics = compute_loss(
-            pred_p,
-            pred_v,
-            batch["target_p"],
-            batch["target_v"],
-        )
+            pred_p, pred_v, _ = model.rollout(
+                batch["ee_p_hist"],
+                batch["ee_v_hist"],
+                batch["goal_p_hist"],
+                batch["goal_v_hist"],
+                batch["goal_p_future"],
+                batch["goal_v_future"],
+            )
+            _, sample_metrics = compute_loss(
+                pred_p,
+                pred_v,
+                batch["target_p"],
+                batch["target_v"],
+            )
 
-        pred_p = pred_p[0].cpu().numpy()
-        pred_v = pred_v[0].cpu().numpy()
-        tgt_p = batch["target_p"][0].cpu().numpy()
-        tgt_v = batch["target_v"][0].cpu().numpy()
-        goal_p = batch["goal_p_future"][0].cpu().numpy()
-        goal_v = batch["goal_v_future"][0].cpu().numpy()
+            pred_p = pred_p[0].cpu().numpy()
+            pred_v = pred_v[0].cpu().numpy()
+            tgt_p = batch["target_p"][0].cpu().numpy()
+            tgt_v = batch["target_v"][0].cpu().numpy()
+            goal_p = batch["goal_p_future"][0].cpu().numpy()
+            goal_v = batch["goal_v_future"][0].cpu().numpy()
 
-        pos_err_norm = np.linalg.norm(pred_p - tgt_p, axis=1)
-        vel_err_norm = np.linalg.norm(pred_v - tgt_v, axis=1)
-        max_pos_err = float(np.max(pos_err_norm))
-        max_vel_err = float(np.max(vel_err_norm))
+            pos_err_norm = np.linalg.norm(pred_p - tgt_p, axis=1)
+            vel_err_norm = np.linalg.norm(pred_v - tgt_v, axis=1)
+            max_pos_err = float(np.max(pos_err_norm))
+            max_vel_err = float(np.max(vel_err_norm))
 
-        t = np.arange(dataset.horizon) * dataset.dt
-        fig, axs = plt.subplots(4, 2, figsize=(15, 13), sharex=True)
-        labels = ["x", "y", "z"]
+            t = np.arange(dataset.horizon) * dataset.dt
+            x_limits = (float(t[0]) - 0.03, float(t[-1]) + 0.03)
+            fig, axs = plt.subplots(
+                4,
+                2,
+                figsize=IEEE_ROLLOUT_FIGSIZE,
+                sharex=True,
+                gridspec_kw={"height_ratios": [0.70, 0.70, 0.70, 0.70]},
+            )
+            fig.subplots_adjust(left=0.17, right=0.99, bottom=0.10, top=0.90, wspace=0.44, hspace=0.18)
+            labels = ["x", "y", "z"]
 
-        for i, label in enumerate(labels):
-            ax_pos = axs[i, 0]
-            ax_vel = axs[i, 1]
+            for i, label in enumerate(labels):
+                ax_pos = axs[i, 0]
+                ax_vel = axs[i, 1]
 
-            ax_pos.plot(t, tgt_p[:, i], label="ee_pos_true", color="black", lw=3)
-            ax_pos.plot(t, pred_p[:, i], label="ee_pos_pred", color="red", lw=3, linestyle="--")
-            ax_pos.plot(t, goal_p[:, i], label="goal_pos", color="tab:blue", lw=3, alpha=1)
-            ax_pos.set_title(f"Position {label}")
-            ax_pos.set_xlabel("time [s]")
-            ax_pos.set_ylabel("m")
-            ax_pos.grid(True)
-            ax_pos.legend()
+                ax_pos.plot(t, tgt_p[:, i], color=IEEE_COLORS["measured"], lw=1.0)
+                ax_pos.plot(t, pred_p[:, i], color=IEEE_COLORS["predicted"], lw=1.0, linestyle="--")
+                ax_pos.plot(t, goal_p[:, i], color=IEEE_COLORS["goal"], lw=0.95)
+                ax_pos.set_ylabel(f"{label} (m)", labelpad=IEEE_YLABEL_PAD)
+                ax_pos.set_xlim(*x_limits)
+                style_ieee_axis(ax_pos)
 
-            ax_vel.plot(t, tgt_v[:, i], label="ee_vel_true", color="black", lw=3)
-            ax_vel.plot(t, pred_v[:, i], label="ee_vel_pred", color="red", lw=3, linestyle="--")
-            ax_vel.plot(t, goal_v[:, i], label="goal_vel", color="tab:blue", lw=3, alpha=1)
-            ax_vel.set_title(f"Velocity {label}")
-            ax_vel.set_xlabel("time [s]")
-            ax_vel.set_ylabel("m/s")
-            ax_vel.grid(True)
-            ax_vel.legend()
+                ax_vel.plot(t, tgt_v[:, i], color=IEEE_COLORS["measured"], lw=1.0)
+                ax_vel.plot(t, pred_v[:, i], color=IEEE_COLORS["predicted"], lw=1.0, linestyle="--")
+                ax_vel.plot(t, goal_v[:, i], color=IEEE_COLORS["goal"], lw=0.95)
+                ax_vel.set_ylabel(f"{label} (m/s)", labelpad=IEEE_YLABEL_PAD)
+                ax_vel.yaxis.set_label_position("left")
+                ax_vel.yaxis.tick_left()
+                ax_vel.tick_params(axis="y", labelleft=True, labelright=False, left=True, right=False, pad=1.2)
+                ax_vel.set_xlim(*x_limits)
+                style_ieee_axis(ax_vel)
 
-        axs[3, 0].plot(t, pos_err_norm, label="|pos_error|_2", color="crimson", lw=2)
-        axs[3, 0].set_title(f"Position 2-norm error | max={max_pos_err:.6f} m")
-        axs[3, 0].set_xlabel("time [s]")
-        axs[3, 0].set_ylabel("m")
-        axs[3, 0].grid(True)
-        axs[3, 0].legend()
+                if i == 0:
+                    ax_pos.set_title("Position", pad=2.5)
+                    ax_vel.set_title("Velocity", pad=2.5)
 
-        axs[3, 1].plot(t, vel_err_norm, label="|vel_error|_2", color="darkorange", lw=2)
-        axs[3, 1].set_title(f"Velocity 2-norm error | max={max_vel_err:.6f} m/s")
-        axs[3, 1].set_xlabel("time [s]")
-        axs[3, 1].set_ylabel("m/s")
-        axs[3, 1].grid(True)
-        axs[3, 1].legend()
+            axs[3, 0].plot(t, pos_err_norm, color=IEEE_COLORS["pos_error"], lw=1.0)
+            axs[3, 0].set_title("Pos. error (2-norm)", pad=1.5)
+            axs[3, 0].set_xlabel("Time (s)")
+            axs[3, 0].set_ylabel("Error (m)", labelpad=IEEE_YLABEL_PAD)
+            axs[3, 0].set_xlim(*x_limits)
+            axs[3, 0].text(
+                0.98,
+                0.08,
+                f"max={max_pos_err:.2e} m",
+                transform=axs[3, 0].transAxes,
+                ha="right",
+                va="bottom",
+                fontsize=6.0,
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.75, pad=0.4),
+            )
+            style_ieee_axis(axs[3, 0])
 
-        fig.suptitle(
-            f"{title} | sample_idx={int(sample_idx)} | loss={sample_metrics['loss']:.6f} | "
-        )
-        fig.tight_layout()
+            axs[3, 1].plot(t, vel_err_norm, color=IEEE_COLORS["vel_error"], lw=1.0)
+            axs[3, 1].set_title("Vel. error (2-norm)", pad=1.5)
+            axs[3, 1].set_xlabel("Time (s)")
+            axs[3, 1].set_ylabel("Error (m/s)", labelpad=IEEE_YLABEL_PAD)
+            axs[3, 1].yaxis.set_label_position("left")
+            axs[3, 1].yaxis.tick_left()
+            axs[3, 1].tick_params(axis="y", labelleft=True, labelright=False, left=True, right=False, pad=1.2)
+            axs[3, 1].set_xlim(*x_limits)
+            axs[3, 1].text(
+                0.98,
+                0.08,
+                f"max={max_vel_err:.2e} m/s",
+                transform=axs[3, 1].transAxes,
+                ha="right",
+                va="bottom",
+                fontsize=6.0,
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.75, pad=0.4),
+            )
+            style_ieee_axis(axs[3, 1])
 
-        file_name = f"sample_{plot_idx:02d}_idx_{int(sample_idx):05d}.png"
-        fig.savefig(os.path.join(out_dir, file_name), dpi=160)
-        plt.close(fig)
+            fig.legend(
+                handles=legend_handles,
+                loc="upper center",
+                ncol=3,
+                frameon=False,
+                bbox_to_anchor=(0.5, 1.01),
+                handlelength=2.0,
+                columnspacing=1.2,
+                borderaxespad=0.0,
+            )
+            for ax in axs[3, :]:
+                pos = ax.get_position()
+                ax.set_position([pos.x0, pos.y0 - 0.018, pos.width, pos.height])
+            fig.align_ylabels(axs[:, 0])
+            fig.align_ylabels(axs[:, 1])
 
-        records.append({
-            "sample_idx": int(sample_idx),
-            "file": file_name,
-            "loss": float(sample_metrics["loss"]),
-            "avg_max_pos_err": float(sample_metrics["avg_max_pos_err"]),
-            "max_pos_err": max_pos_err,
-            "max_vel_err": max_vel_err,
-        })
+            file_name = f"sample_{plot_idx:02d}_idx_{int(sample_idx):05d}.png"
+            fig.savefig(os.path.join(out_dir, file_name), dpi=IEEE_FIG_DPI)
+            plt.close(fig)
+
+            records.append({
+                "sample_idx": int(sample_idx),
+                "file": file_name,
+                "loss": float(sample_metrics["loss"]),
+                "avg_max_pos_err": float(sample_metrics["avg_max_pos_err"]),
+                "max_pos_err": max_pos_err,
+                "max_vel_err": max_vel_err,
+            })
 
     return {
         "out_dir": out_dir,
@@ -720,17 +822,33 @@ def save_rollout_plot(model, dataset, device, out_dir: str, title: str, num_samp
 
 def save_training_curve(history, out_path: str):
     epochs = np.arange(1, len(history["train_loss"]) + 1)
-    fig = plt.figure(figsize=(8, 5))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.plot(epochs, history["train_loss"], label="train_loss")
-    ax.plot(epochs, history["val_loss"], label="val_loss")
-    ax.set_xlabel("epoch")
-    ax.set_ylabel("loss")
-    ax.grid(True)
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=160)
-    plt.close(fig)
+    with plt.rc_context(IEEE_PLOT_RC):
+        fig = plt.figure(figsize=IEEE_TRAIN_FIGSIZE)
+        ax = fig.add_subplot(1, 1, 1)
+
+        if len(epochs) == 0:
+            ax.text(
+                0.5,
+                0.5,
+                "No fine-tuning epochs\n(checkpoint evaluation only)",
+                ha="center",
+                va="center",
+                fontsize=6.6,
+            )
+            ax.set_xticks([])
+            ax.set_yticks([])
+        else:
+            ax.plot(epochs, history["train_loss"], color=IEEE_COLORS["train"], lw=1.2, label="Train")
+            ax.plot(epochs, history["val_loss"], color=IEEE_COLORS["val"], lw=1.2, label="Validation")
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel("Loss")
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
+            style_ieee_axis(ax, xbins=5, ybins=4)
+            ax.legend(loc="best", frameon=False, handlelength=2.2)
+
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=IEEE_FIG_DPI)
+        plt.close(fig)
 
 
 

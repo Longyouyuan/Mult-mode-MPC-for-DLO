@@ -51,7 +51,7 @@ FIGSIZE = (7.16, 4.15)
 DPI = 600
 
 COL_ORDER = ["sin", "egg", "eight", "SpongeBob", "PatrickStar", "flower"]
-COL_TITLES = ["Sin", "Egg", "Eight", "SpongeBob", "PatrickStar", "Flower"]
+COL_TITLES = ["Sinusoid", "Egg", "Lemniscate", "SpongeBob", "PatrickStar", "Flower"]
 ROW_SPECS = [
     {"sin": 4.0, "egg": 4.0, "eight": 4.0, "SpongeBob": 12.0, "PatrickStar": 12.0, "flower": 12.0},
     {"sin": 5.0, "egg": 5.0, "eight": 5.0, "SpongeBob": 15.0, "PatrickStar": 15.0, "flower": 15.0},
