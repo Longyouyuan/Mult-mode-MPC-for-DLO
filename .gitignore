@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[cod]
+
+# Local IDE settings
+.idea/
+.vscode/
+
+# Generated videos and large media files
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Large local experiment data
+/test_for_real_experiment/franka_data/*.csv
+
+# Large local presentation artifact
+/report.pptx

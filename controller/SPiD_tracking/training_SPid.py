@@ -2,6 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from common.rope import Rope
 from common.utils import *
 from torch.optim.lr_scheduler import LambdaLR
@@ -345,10 +353,10 @@ sampled_data_all = []
 # sampled_data = np.load('../../data/data_for_controller_training.npy').astype(np.float32)  # (sample_num, 1+node_num*6+2)
 # sampled_data_all.append(np.concatenate([sampled_data[:500], sampled_data[500::1]]))
 
-sampled_data = np.load('../../data/fixed_tip_pos_low.npy').astype(np.float32)
+sampled_data = np.load(REPO_ROOT / 'data' / 'fixed_tip_pos_low.npy').astype(np.float32)
 sampled_data_all.append(sampled_data[::10])
 
-sampled_data_all.append(np.load('../../data/DAgger_01.npy').astype(np.float32))
+sampled_data_all.append(np.load(REPO_ROOT / 'data' / 'DAgger_01.npy').astype(np.float32))
 
 
 sampled_data = np.vstack(sampled_data_all)
@@ -408,7 +416,7 @@ del position_data, velocity_data, pos_train, vel_train, pos_val, vel_val, datase
 
 controller = Controller(input_dim=(N+1)*3*2+3*pre_length, action_dim=3, hidden_width=512, max_action=max_action).to(device)
 # # L=0.1
-model_name = 'trained_tracking_controller_cp10_pre75_vel_ma1.5_N20_L1.0_ctr_smart_right.pt'
+model_name = SCRIPT_DIR / 'trained_tracking_controller_cp10_pre75_vel_ma1.5_N20_L1.0_ctr_smart_right.pt'
 controller.load_state_dict(torch.load(model_name))
 # # L=0.2
 optimizer = torch.optim.Adam(controller.parameters(), lr=learning_rate, weight_decay=0e-5)
@@ -462,7 +470,7 @@ for total_time in [12.0, 15.0, 18.0]:
     total_horizon_t = int(1000 / ctr_period * total_time)
     for drawn_name in ['SpongeBob', 'flower', 'PatrickStar']:
         traj_list.append(build_goal_traj_from_drawn(
-            drawn_path=f'../../my_trajs/{drawn_name}.npy',
+            drawn_path=str(REPO_ROOT / 'my_trajs' / f'{drawn_name}.npy'),
             total_horizon=total_horizon_t,
             device=device,
             z0=0.2,
@@ -649,13 +657,13 @@ for stage_idx, stage in enumerate(curriculum):
         #             plot_animation_3d_for_path_tracking(positions_history1, traj, dt, record_interval=10, L=L * 2, batch_idx=0)
 
     # Save checkpoint at end of each curriculum stage
-    ckpt_name = f'ckpt_stage{stage_idx+1}_seg{traj_seg_length}.pt'
+    ckpt_name = SCRIPT_DIR / f'ckpt_stage{stage_idx+1}_seg{traj_seg_length}.pt'
     torch.save(controller.state_dict(), ckpt_name)
     print(f"[Stage {stage_idx+1}/{len(curriculum)} End] checkpoint={ckpt_name}")
 
 # Save trained model
 print("[Save] saving final model...")
-model_name = f'trained_tracking_controller_cp{ctr_period}_pre{pre_length}_{mode}_ma{max_action}_N{N}_L{L}_ctr_smart_right.pt'
+model_name = SCRIPT_DIR / f'trained_tracking_controller_cp{ctr_period}_pre{pre_length}_{mode}_ma{max_action}_N{N}_L{L}_ctr_smart_right.pt'
 torch.save(controller.state_dict(), model_name)
 print(f"[Save] final model saved: {model_name}")
 

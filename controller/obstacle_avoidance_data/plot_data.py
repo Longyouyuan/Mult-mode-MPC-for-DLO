@@ -146,7 +146,7 @@ def plot_xy_trajectory(goal, m2pc, svmpc, dbscan):
 
     # Row 1: Goal, M2PC, SVMPC, C-MPPI
     row1_handles = [hl["Goal"], hl["M2PC"], hl["SVMPC"], hl["C-MPPI"], obstacle_proxy]
-    row1_labels  = ["Goal", "M2PC", "SVMPC", "C-MPPI", "Obstacle"]
+    row1_labels  = ["Goal", "BM2PC", "SVMPC", "C-MPPI", "Obstacle"]
     # Row 2: Start, Obstacle
     row2_handles = [hl["Start"]]
     row2_labels  = ["Start"]
@@ -155,13 +155,15 @@ def plot_xy_trajectory(goal, m2pc, svmpc, dbscan):
                      loc="upper left", bbox_to_anchor=(0.0, 1.01),
                      frameon=False, ncol=5,
                      handlelength=1.4, handletextpad=0.3,
-                     borderpad=0.0, labelspacing=0.2, columnspacing=0.7)
+                     borderpad=0.0, labelspacing=0.2, columnspacing=0.7,
+                     fontsize=7.4)
     ax.add_artist(leg1)
     ax.legend(row2_handles, row2_labels,
               loc="upper left", bbox_to_anchor=(0.0, 0.94),
               frameon=False, ncol=2,
               handlelength=1.4, handletextpad=0.3,
-              borderpad=0.0, labelspacing=0.2, columnspacing=0.7)
+              borderpad=0.0, labelspacing=0.2, columnspacing=0.7,
+              fontsize=7.4)
 
     fig.tight_layout(pad=0.25)
     save_figure(fig, "obstacle_avoidance_xy_trajectory_compare")
@@ -195,7 +197,7 @@ def plot_tracking_error(goal, m2pc, svmpc, dbscan):
 
 
 def plot_rmse_bar(m2pc_rmse, svmpc_rmse, dbscan_rmse):
-    labels = ["M2PC", "C-MPPI", "SVMPC"]
+    labels = ["BM2PC", "C-MPPI", "SVMPC"]
     values = np.asarray([m2pc_rmse, dbscan_rmse, svmpc_rmse], dtype=np.float64)
     colors = ["#d62728", "#2ca02c", "#1f77b4"]
     hatches = ["", "////", "\\\\"]

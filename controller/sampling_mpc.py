@@ -2,6 +2,13 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from common.utils import *
 from common.rope_warp_4 import WarpRope, N, P
 
@@ -273,7 +280,7 @@ if __name__ == "__main__":
 
     # === 2. Draw Traj ===
     Goal_traj = build_goal_traj_from_drawn(
-        drawn_path="../my_trajs/my_draw.npy",
+        drawn_path=str(REPO_ROOT / "my_trajs" / "my_draw.npy"),
         total_horizon=total_horizon,
         device=device,
         z0=0.2,

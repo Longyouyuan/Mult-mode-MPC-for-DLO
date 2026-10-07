@@ -1,5 +1,15 @@
 import mujoco.viewer as viewer
 import time
+import sys
+from pathlib import Path
+
+# Allow this file to be launched directly from VS Code or a terminal.  Python
+# otherwise searches ``controller/`` first and cannot see sibling packages
+# such as ``Mujoco_env`` at the repository root.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from Mujoco_env.mj_utils import *
 from common.utils import *
 from M2PC import Planner, cost_fn
@@ -8,7 +18,7 @@ import warnings
 
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path(str(PROJECT_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -56,8 +66,8 @@ total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
 top_k_good = 200 * 3
-beta = 1.0
-wJ =  1.7  # 1.5
+beta = 1000.0
+wJ = 1700.0  # 1500.0
 
 visualization = False
 

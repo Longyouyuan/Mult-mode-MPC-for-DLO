@@ -53,7 +53,7 @@ total_horizon = int(total_steps / ctr_period)
 # diversity 超参
 top_k_good = 200
 beta = 5.0
-wJ = 0.0
+wJ = 1.0
 
 visualization = True
 

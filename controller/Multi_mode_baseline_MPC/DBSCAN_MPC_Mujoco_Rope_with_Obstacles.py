@@ -1,5 +1,12 @@
 import mujoco.viewer as viewer
 import time
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from Mujoco_env.mj_utils import *
 from common.utils import *
 from DBSCAN_MPC import Planner, cost_fn
@@ -114,7 +121,7 @@ def get_dbscan_cluster_viz(planner, max_draw_clusters=8, members_per_cluster=4, 
 
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path(str(REPO_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 

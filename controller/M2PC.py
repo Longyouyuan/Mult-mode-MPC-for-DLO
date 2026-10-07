@@ -2,6 +2,14 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import math
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from common.utils import *
 from common.rope_warp_4_baserope import WarpRope, N, P
 import warnings
@@ -24,7 +32,8 @@ class Planner:
 
     def __init__(self, rope: WarpRope, cost_fn, dt, ctr_period, horizon, n_sample, n_improve,
                  noise_scale, action_dim, limits=None, device='cpu', mode='acc',
-                 m_modes=1, top_k_good=200, beta=1.0, wJ=1.0, standard_m2pc=True):
+                 m_modes=1, top_k_good=200, beta=1.0, wJ=1.0, standard_m2pc=True,
+                 prior_weight=1.0):
 
         self.rope = rope
         self.cost_fn = cost_fn
@@ -50,6 +59,11 @@ class Planner:
         self.top_k_good = int(top_k_good)
         self.beta = float(beta)
         self.wJ = float(wJ)
+        self.prior_weight = float(prior_weight)
+        if self.prior_weight < 0.0:
+            raise ValueError("prior_weight must be non-negative")
+        if self.noise_scale <= 0.0 and self.prior_weight > 0.0:
+            raise ValueError("noise_scale must be positive when prior_weight > 0")
 
         # batch = m 个 seeds + n_sample 个扰动样本
         self.batch = self.m + self.n_sample
@@ -68,6 +82,7 @@ class Planner:
         # cache for visualization
         self.last_tip_traj = None  # (B,H,3)
         self.last_cost = None      # (B,)
+        self.last_log_prior = None # (B,)
         self.traj_seeds = None # (m,H,3)
         dev_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(":")[0]
         self._profile_uses_cuda = bool(torch.cuda.is_available() and dev_type == "cuda")
@@ -125,6 +140,31 @@ class Planner:
 
         return self._cand
 
+    @staticmethod
+    def _minmax_norm(v, eps=1e-8):
+        vmin = v.min()
+        vmax = v.max()
+        if (vmax - vmin) < 1e-12:
+            return torch.zeros_like(v)
+        return (v - vmin) / (vmax - vmin + eps)
+
+    @torch.no_grad()
+    def _gaussian_mixture_log_prior(self, candidates):
+        """Log density under the equally weighted Gaussian warm-start mixture.
+
+        BM2PC uses only a few modes, so the direct broadcast distance kernel is
+        faster than a small GEMM on CUDA while keeping the temporary tensor tiny.
+        """
+        flat = candidates.reshape(candidates.shape[0], -1)
+        centers = self.seeds.reshape(self.m, -1)
+        diff = flat[:, None, :] - centers[None, :, :]
+        sq_dist = (diff * diff).sum(dim=2)
+
+        variance = self.noise_scale * self.noise_scale
+        log_components = -0.5 * sq_dist / variance
+        log_normalizer = -0.5 * flat.shape[1] * math.log(2.0 * math.pi * variance)
+        return torch.logsumexp(log_components, dim=1) - math.log(self.m) + log_normalizer
+
     # ------------------------------------------------------------
     @torch.no_grad()
     def rollout(self, pos, vel, batch_ctr_parameter_full, full=False):
@@ -170,7 +210,7 @@ class Planner:
 
     # ------------------------------------------------------------
     @torch.no_grad()
-    def _greedy_select(self, cost_g_org, tip_traj_g_org, thr=1e5):
+    def _greedy_select(self, cost_g_org, tip_traj_g_org, log_prior_g_org=None, thr=1e5):
         """
         cost_g_org: (K,)
         tip_traj_g_org: (K,H,3)
@@ -192,32 +232,33 @@ class Planner:
         elif valid_n <= self.m:
             return torch.arange(self.m, device=self.device, dtype=torch.long)
 
-        def minmax_norm(v, eps=1e-8):
-            vmin = v.min()
-            vmax = v.max()
-            if (vmax - vmin) < 1e-12:
-                return torch.zeros_like(v)
-            return (v - vmin) / (vmax - vmin + eps)
-
         cost_g = cost_g_org[:valid_n]
         tip_traj_g = tip_traj_g_org[:valid_n]
+        log_prior_g = None
+        if self.prior_weight > 0.0 and log_prior_g_org is not None:
+            log_prior_g = log_prior_g_org[:valid_n]
 
         feat = tip_traj_g.reshape(valid_n, -1)  # (K, H*3)
 
         # Lazy column computation: only compute distance to each selected point
         # instead of the full (K,K) matrix. Saves ~300x FLOPs for small m.
-        first = int(0)  # first = int(torch.argmin(cost_g).item())
+        first_score = -self.wJ * self._minmax_norm(cost_g)
+        if log_prior_g is not None:
+            first_score = first_score + self.prior_weight * log_prior_g
+        first = int(torch.argmax(first_score).item())
         selected = [first]
 
         diff = feat - feat[first]              # (K, d)
         div_sum = (diff * diff).sum(dim=1)     # (K,) squared distances to first point
 
-        c_norm = minmax_norm(cost_g)
+        c_norm = self._minmax_norm(cost_g)
         score = torch.empty(valid_n, device=feat.device, dtype=feat.dtype)
         while len(selected) < self.m:
-            d_norm = minmax_norm(div_sum)
+            d_norm = self._minmax_norm(div_sum)
 
             score.copy_(-self.wJ * c_norm + self.beta * d_norm)
+            if log_prior_g is not None:
+                score.add_(self.prior_weight * log_prior_g)
             score[selected] = -1e18
 
             nxt = int(torch.argmax(score).item())
@@ -239,6 +280,9 @@ class Planner:
 
         for _ in range(self.n_improve):
             batch_ctr_parameter = self._build_candidates_full_horizon()  # (B,H,3)
+            log_prior = None
+            if self.prior_weight > 0.0:
+                log_prior = self._gaussian_mixture_log_prior(batch_ctr_parameter)
 
             if Obs is None:
                 self._sync_profile_timer()
@@ -269,7 +313,10 @@ class Planner:
             self._sync_profile_timer()
             t0 = time.perf_counter()
             if self.m == 1:
-                idx = int(cost.argmin().item())
+                selection_score = -self.wJ * self._minmax_norm(cost)
+                if log_prior is not None:
+                    selection_score = selection_score + self.prior_weight * log_prior
+                idx = int(torch.argmax(selection_score).item())
                 if self.standard_m2pc:
                     self.seeds.copy_(batch_ctr_parameter[idx])
                 else:
@@ -294,10 +341,11 @@ class Planner:
 
                 traj_g = batch_traj[good_idx]              # (K,H,3)
                 cost_g = cost[good_idx]                    # (K,)
+                log_prior_g = log_prior[good_idx] if log_prior is not None else None
                 # ctr_g = batch_ctr_parameter[good_idx]      # (K,H,3)
 
                 # greedy select m modes
-                sel = self._greedy_select(cost_g, traj_g)  # (m,)
+                sel = self._greedy_select(cost_g, traj_g, log_prior_g)  # (m,)
                 # U_star = batch_ctr_parameter[good_idx[sel]]                      # (m,H,3)
 
                 # update seeds
@@ -308,6 +356,7 @@ class Planner:
         # cache for visualization: show the last sampling batch
         self.last_tip_traj = batch_traj.detach()
         self.last_cost = cost.detach()
+        self.last_log_prior = log_prior.detach() if log_prior is not None else None
         if self.m == 1:
             self.traj_seeds = batch_traj[idx:idx+1]
         else:
@@ -470,8 +519,8 @@ if __name__ == "__main__":
 
     # diversity 超参
     top_k_good = 200
-    beta = 5.0
-    wJ = 0.0
+    beta = 5000.0
+    wJ = 1000.0
 
     visualization = True
 

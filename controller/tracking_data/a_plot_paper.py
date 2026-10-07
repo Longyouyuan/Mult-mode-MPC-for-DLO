@@ -374,7 +374,7 @@ def main():
 
     legend_handles = [
         Line2D([0], [0], color=GOAL_COLOR, linewidth=LEGEND_LINE_WIDTH_GOAL, label="Goal"),
-        Line2D([0], [0], color=M2PC_COLOR, alpha=M2PC_ALPHA, linewidth=LEGEND_LINE_WIDTH_METHOD, label="M2PC"),
+        Line2D([0], [0], color=M2PC_COLOR, alpha=M2PC_ALPHA, linewidth=LEGEND_LINE_WIDTH_METHOD, label="BM2PC"),
         Line2D([0], [0], color=SPID_COLOR, alpha=SPID_ALPHA, linewidth=LEGEND_LINE_WIDTH_METHOD, label="SPiD"),
         Line2D([0], [0], marker="o", color="none", markerfacecolor=START_COLOR, markeredgecolor=START_COLOR, markersize=4, label="Start"),
     ]

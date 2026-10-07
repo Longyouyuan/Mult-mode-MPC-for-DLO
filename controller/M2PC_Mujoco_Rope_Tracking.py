@@ -1,6 +1,13 @@
 import mujoco.viewer as viewer
-from Mujoco_env.mj_utils import *
 import time
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from Mujoco_env.mj_utils import *
 from common.utils import *
 
 from M2PC import Planner, cost_fn
@@ -8,7 +15,7 @@ from common.rope_warp_4 import WarpRope, N, P
 
 
 # === mujoco ===
-model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path(str(REPO_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -36,7 +43,7 @@ bending_k = 0.0006712 * 0.0
 bending_damping = 0.000401
 air_drag = 0.2206 / 1000
 g = 10.07
-T_task = 4.0
+T_task = 12.0
 total_steps = int(T_task / dt)
 mode = 'acc'  # 或 'vel'
 
@@ -57,8 +64,8 @@ total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
 # diversity 超参
 top_k_good = 200
-beta = 5.0
-wJ = 0.0
+beta = 1000.0
+wJ = 1700.0
 
 visualization = False
 
@@ -95,27 +102,27 @@ points = half_dense_then_uniform(
 
 # Goal_traj = eight_traj(points, scale_x=0.45*2.0, scale_y=0.65*2.0, z0=0.2, loops=1, plot=True, device=device)  # 5s careful
 # Goal_traj = egg_traj(points, scale_x=0.38*2.0, scale_y=0.52*2.0, plot=False, device=device)
-Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
+# Goal_traj = sin_traj(points, width=0.45*2.0, plot=False, device=device)
 # Goal_traj = torch.vstack((torch.sin(4*points)*0.25, points,
 #                           torch.ones(total_horizon + 1 - last_point_repeat) * 0.2)).T.to(device)
-plot_goal_traj(Goal_traj, T_task)
+# plot_goal_traj(Goal_traj, T_task)
 
 # # === 2. Draw Traj ===
-# Goal_traj = build_goal_traj_from_drawn(
-#     drawn_path="../my_trajs/SpongeBob.npy",  # SpongeBob flower PatrickStar
-#     total_horizon=total_horizon-last_point_repeat,
-#     device=device,
-#     z0=0.2,
-#     scale_x=3.0,
-#     scale_y=3.0,
-#     keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
-#     sigma=0.0,  # 高斯顺滑
-#     uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
-#     ratio=0.3,
-#     sharpness=2.0,
-#     interval=(0.0, 2.0)
-# )
-# plot_goal_traj(Goal_traj, T_task)
+Goal_traj = build_goal_traj_from_drawn(
+    drawn_path=str(REPO_ROOT / "my_trajs" / "SpongeBob.npy"),  # SpongeBob flower PatrickStar
+    total_horizon=total_horizon-last_point_repeat,
+    device=device,
+    z0=0.2,
+    scale_x=3.0,
+    scale_y=3.0,
+    keep_aspect=False,  # 允许非等比缩放（你说可能不是方形）
+    sigma=0.0,  # 高斯顺滑
+    uniform_M=1000,  # 越大越均匀/越平滑（但太大也没必要）
+    ratio=0.3,
+    sharpness=2.0,
+    interval=(0.0, 2.0)
+)
+plot_goal_traj(Goal_traj, T_task)
 
 ##-----------------------------------------------------------------------------------------------##
 

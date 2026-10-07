@@ -42,8 +42,8 @@ last_point_repeat = 100 * 0
 
 # diversity 超参
 top_k_good = 200
-beta = 5.0
-wJ = 0.0
+beta = 5000.0
+wJ = 1000.0
 
 # 只做 MuJoCo 后台测试，不开 viewer/动画
 visualization = False

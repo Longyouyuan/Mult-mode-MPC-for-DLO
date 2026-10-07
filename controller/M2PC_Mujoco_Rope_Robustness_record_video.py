@@ -3,15 +3,21 @@ import mujoco.viewer as viewer
 import random
 import time
 import numpy as np
+import sys
 from pathlib import Path
 import imageio.v2 as imageio
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from Mujoco_env.mj_utils import *
 from common.utils import *
 from M2PC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path(str(REPO_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -59,8 +65,8 @@ total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
 top_k_good = 200
-beta = 5.0
-wJ = 0.0
+beta = 5000.0
+wJ = 1000.0
 
 visualization = False
 DISTURBANCE_DATA_DIR = Path(__file__).resolve().parent / "disturbance_data"

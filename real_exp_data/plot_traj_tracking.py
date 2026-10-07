@@ -189,7 +189,7 @@ def plot_top_view(ax, item):
         color=M2PC_COLOR,
         alpha=M2PC_ALPHA,
         linewidth=LINE_WIDTH_METHOD,
-        label="M2PC",
+        label="BM2PC",
         zorder=4,
     )
     ax.plot(
@@ -271,7 +271,7 @@ def plot_figure(loaded):
 
     handles, labels = axes[0].get_legend_handles_labels()
     handles_by_label = dict(zip(labels, handles))
-    legend_labels = ["Goal", "M2PC", "SPiD", "Start"]
+    legend_labels = ["Goal", "BM2PC", "SPiD", "Start"]
     legend_handles = [handles_by_label[label] for label in legend_labels]
     fig.legend(
         handles=legend_handles,
@@ -282,7 +282,7 @@ def plot_figure(loaded):
         bbox_to_anchor=(0.53, 0.97),
         handlelength=1.35,
         handletextpad=0.35,
-        columnspacing=0.55,
+        columnspacing=1.0,
         borderaxespad=0.0,
     )
     fig.subplots_adjust(left=0.095, right=0.995, bottom=0.165, top=0.820, wspace=0.00)

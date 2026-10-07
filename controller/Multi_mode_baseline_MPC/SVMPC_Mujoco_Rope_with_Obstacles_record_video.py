@@ -1,9 +1,15 @@
 import mujoco
 import mujoco.viewer as viewer
 import time
+import sys
 from pathlib import Path
 import imageio.v2 as imageio
 import numpy as np
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from Mujoco_env.mj_utils import *
 from common.utils import *
 from SVMPC import Planner, cost_fn
@@ -12,7 +18,7 @@ import warnings
 
 
 # ===================== MuJoCo setup =====================
-model = mujoco.MjModel.from_xml_path('../../Mujoco_env/cable_show.xml')
+model = mujoco.MjModel.from_xml_path(str(REPO_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, 4)  # 导入关节帧
 
@@ -87,10 +93,10 @@ RECORD_DATA = False
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080
 VIDEO_FPS = 60
-VIDEO_DIR = Path("../vedios/obs_avoidance")
+VIDEO_DIR = REPO_ROOT / "controller" / "vedios" / "obs_avoidance"
 VIDEO_PATH = VIDEO_DIR / "svmpc_rope_obstacle_avoidance.mp4"
 
-DATA_DIR = Path("../obstacle_avoidance_data")
+DATA_DIR = REPO_ROOT / "controller" / "obstacle_avoidance_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 

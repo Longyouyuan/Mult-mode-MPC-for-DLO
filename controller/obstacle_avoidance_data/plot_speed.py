@@ -10,7 +10,7 @@ THIS_FILE = Path(__file__).resolve()
 DATA_DIR = THIS_FILE.parent
 
 PROFILE_FILES = (
-    ("M2PC", DATA_DIR / "m2pc_profile_records.npz", "#d62728", ""),
+    ("BM2PC", DATA_DIR / "m2pc_profile_records.npz", "#d62728", ""),
     ("C-MPPI", DATA_DIR / "dbscan_profile_records.npz", "#2ca02c", "////"),
     ("SVMPC", DATA_DIR / "svmpc_profile_records.npz", "#1f77b4", "\\\\\\\\"),
 )
