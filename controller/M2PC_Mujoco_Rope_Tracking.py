@@ -14,6 +14,14 @@ from M2PC import Planner, cost_fn
 from common.rope_warp_4 import WarpRope, N, P
 
 
+# Run the complete 6 trajectories x 3 durations without viewer/plots.
+if __name__ == "__main__" and "--all-headless" in sys.argv:
+    from M2PC_Mujoco_Rope_Tracking_paper_data import main as run_all_tracking_experiments
+
+    run_all_tracking_experiments()
+    raise SystemExit
+
+
 # === mujoco ===
 model = mujoco.MjModel.from_xml_path(str(REPO_ROOT / 'Mujoco_env' / 'cable_show.xml'))
 data = mujoco.MjData(model)
@@ -64,8 +72,8 @@ total_horizon = int(total_steps / ctr_period) + last_point_repeat
 
 # diversity 超参
 top_k_good = 200
-beta = 1000.0
-wJ = 1700.0
+beta = 600.0 / 1
+wJ = 170000.0  / 1
 
 visualization = False
 
@@ -109,7 +117,7 @@ points = half_dense_then_uniform(
 
 # # === 2. Draw Traj ===
 Goal_traj = build_goal_traj_from_drawn(
-    drawn_path=str(REPO_ROOT / "my_trajs" / "SpongeBob.npy"),  # SpongeBob flower PatrickStar
+    drawn_path=str(REPO_ROOT / "my_trajs" / "PatrickStar.npy"),  # SpongeBob flower PatrickStar
     total_horizon=total_horizon-last_point_repeat,
     device=device,
     z0=0.2,

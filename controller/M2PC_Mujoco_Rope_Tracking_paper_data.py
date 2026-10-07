@@ -42,8 +42,8 @@ last_point_repeat = 100 * 0
 
 # diversity 超参
 top_k_good = 200
-beta = 5000.0
-wJ = 1000.0
+beta = 10000.0 / 1
+wJ = 170000.0 / 1
 
 # 只做 MuJoCo 后台测试，不开 viewer/动画
 visualization = False
@@ -348,9 +348,7 @@ def main():
     print(f"[Summary] worst={worst['traj_name']} rmse={worst['rmse_cm']:.2f}cm max={worst['max_err_cm']:.2f}cm")
 
     csv_path = save_summary_csv(results)
-    fig_path = plot_all_results(results)
     print(f"[Save] summary csv: {csv_path}")
-    print(f"[Save] summary figure: {fig_path}")
 
 
 if __name__ == '__main__':

@@ -62,8 +62,8 @@ total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
 top_k_good = 200
-beta = 1000.0
-wJ = 1700.0
+beta = 600.0
+wJ = 170000.0
 
 visualization = False
 DISTURBANCE_DATA_DIR = Path(__file__).resolve().parent / "disturbance_data"

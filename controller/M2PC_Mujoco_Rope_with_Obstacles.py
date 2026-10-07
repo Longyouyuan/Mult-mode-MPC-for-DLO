@@ -54,22 +54,22 @@ ctr_period = 25  # 1000/ctr_period Hz
 horizon = 35
 
 # ===== 多模态参数 =====
-n_sample = 402 * 1
+n_sample = 402 * 1  # Nearest multiple of 3 to the paper's nominal 400, enabling equal samples per mode.
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 1
-noise_scale = 2.0
+n_improve = 10 # set it as 1 to reproduce the paper
+noise_scale = 1.5
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
 top_k_good = 200 * 3
-beta = 1000.0
-wJ = 1700.0  # 1500.0
+beta = 600.0/1
+wJ = 170000.0/200  # 1500.0
 
-visualization = False
+visualization = True
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
