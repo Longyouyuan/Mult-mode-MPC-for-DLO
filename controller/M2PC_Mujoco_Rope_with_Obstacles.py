@@ -65,7 +65,7 @@ limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参
-top_k_good = 200 * 3
+top_k_good = 200 * 1
 beta = 600.0/1
 wJ = 170000.0/200  # 1500.0
 
