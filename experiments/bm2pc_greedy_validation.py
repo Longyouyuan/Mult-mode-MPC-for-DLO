@@ -1,9 +1,8 @@
 """BM2PC selection-rule validation without modifying the production controller.
 
-The script provides three selectors:
+The script compares only two selectors:
   dynamic: the production Dynamic-Norm Greedy selector;
-  fixed-greedy: exact marginal-gain greedy for the paper reference objective;
-  fixed-exhaustive: vectorized exhaustive search for the same objective.
+  pool-norm-exhaustive: a fixed pool-normalized exhaustive reference.
 
 All experimental variants live in this file.  The production controller is
 imported and its dynamic selector is called directly.
@@ -88,6 +87,51 @@ def fixed_objective(features: np.ndarray, scores: np.ndarray,
     return value
 
 
+def pool_norm_terms(cost: np.ndarray, features: np.ndarray,
+                    log_prior: np.ndarray, wj: float = REFERENCE_WJ,
+                    beta: float = REFERENCE_BETA,
+                    prior_weight: float = REFERENCE_PRIOR_WEIGHT) -> Dict[str, Any]:
+    """Construct one fixed, pool-wise normalized objective."""
+    j = np.asarray(cost, dtype=np.float64).reshape(-1)
+    z = np.asarray(features, dtype=np.float64).reshape(j.size, -1)
+    lp = np.asarray(log_prior, dtype=np.float64).reshape(-1)
+    if lp.size != j.size or z.shape[0] != j.size:
+        raise ValueError("cost, features and log_prior must share the pool size")
+    jmin = float(np.min(j))
+    jmax = float(np.max(j))
+    jrange = jmax - jmin
+    cost_degenerate = bool(jrange < RANGE_TOL)
+    jnorm = np.zeros_like(j) if cost_degenerate else (j - jmin) / (jrange + EPS)
+    d = pairwise_sq(z)
+    if j.size > 1:
+        tri = np.triu_indices(j.size, 1)
+        diversity_scale = float(np.max(d[tri]))
+    else:
+        diversity_scale = 0.0
+    diversity_degenerate = bool(diversity_scale < RANGE_TOL)
+    beta_eff = 0.0 if diversity_degenerate else float(beta / (diversity_scale + EPS))
+    w = -float(wj) * jnorm + float(prior_weight) * lp
+    return {
+        "cost": j, "features": z, "log_prior": lp, "cost_norm": jnorm,
+        "cost_min": jmin, "cost_max": jmax, "cost_range": jrange,
+        "cost_degenerate": cost_degenerate, "pairwise_sq": d,
+        "diversity_scale": diversity_scale,
+        "diversity_degenerate": diversity_degenerate, "beta_eff": beta_eff,
+        "weights": w,
+    }
+
+
+def pool_norm_objective(terms: Dict[str, Any], indices: Sequence[int]) -> float:
+    idx = np.asarray(indices, dtype=np.int64)
+    if idx.size == 0:
+        return 0.0
+    d = np.asarray(terms["pairwise_sq"], dtype=np.float64)
+    value = float(np.sum(np.asarray(terms["weights"], dtype=np.float64)[idx]))
+    if idx.size > 1:
+        value += float(terms["beta_eff"] * np.sum(d[np.ix_(idx, idx)][np.triu_indices(idx.size, 1)]))
+    return value
+
+
 def fixed_greedy(features: np.ndarray, scores: np.ndarray, beta: float,
                  n: int) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
     z = np.asarray(features, dtype=np.float64)
@@ -168,6 +212,52 @@ def fixed_exhaustive(features: np.ndarray, scores: np.ndarray, beta: float,
     best = np.asarray([c[best_pos] for c in combos], dtype=np.int64)
     worst = float(values[min_pos])
     return best, float(values[best_pos]), worst
+
+
+def pool_norm_exhaustive(cost: np.ndarray, features: np.ndarray,
+                         log_prior: np.ndarray, n: int = N_MODES,
+                         wj: float = REFERENCE_WJ,
+                         beta: float = REFERENCE_BETA,
+                         prior_weight: float = REFERENCE_PRIOR_WEIGHT,
+                         return_terms: bool = False):
+    terms = pool_norm_terms(cost, features, log_prior, wj, beta, prior_weight)
+    m = len(terms["weights"])
+    if n < 1 or n > m:
+        raise ValueError(f"invalid n={n} for M={m}")
+    combos = combination_indices(m, n)
+    if n == 1:
+        values = terms["weights"][combos[0]]
+    elif n == 2:
+        i, j = combos
+        values = terms["weights"][i] + terms["weights"][j] + terms["beta_eff"] * terms["pairwise_sq"][i, j]
+    elif n == 3:
+        i, j, k = combos
+        values = (terms["weights"][i] + terms["weights"][j] + terms["weights"][k]
+                  + terms["beta_eff"] * (terms["pairwise_sq"][i, j]
+                  + terms["pairwise_sq"][i, k] + terms["pairwise_sq"][j, k]))
+    else:
+        values = np.asarray([pool_norm_objective(terms, [c[row] for c in combos])
+                             for row in range(len(combos[0]))], dtype=np.float64)
+    best_pos = int(np.argmax(values))
+    min_pos = int(np.argmin(values))
+    best = np.sort(np.asarray([c[best_pos] for c in combos], dtype=np.int64))
+    worst = np.sort(np.asarray([c[min_pos] for c in combos], dtype=np.int64))
+    result = (best, float(values[best_pos]), float(values[min_pos]))
+    return result + (terms,) if return_terms else result
+
+
+def naive_pool_norm_exhaustive(cost: np.ndarray, features: np.ndarray,
+                               log_prior: np.ndarray, n: int = N_MODES):
+    terms = pool_norm_terms(cost, features, log_prior)
+    best_idx, worst_idx = None, None
+    best_value, worst_value = -np.inf, np.inf
+    for idx in itertools.combinations(range(len(cost)), n):
+        value = pool_norm_objective(terms, idx)
+        if value > best_value:
+            best_value, best_idx = value, idx
+        if value < worst_value:
+            worst_value, worst_idx = value, idx
+    return np.asarray(best_idx, dtype=np.int64), float(best_value), np.asarray(worst_idx, dtype=np.int64), float(worst_value)
 
 
 def naive_exhaustive(features: np.ndarray, scores: np.ndarray, beta: float,
@@ -277,53 +367,35 @@ class DynamicTracePlanner(ProductionPlanner):
     def __init__(self, *args, trace_sink=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.trace_sink = trace_sink
+        self._pending_trace = None
 
     @torch.no_grad()
     def _greedy_select(self, cost_g_org, tip_traj_g_org, log_prior_g_org=None, thr=FILTER_THRESHOLD):
         valid_n, cost_g, tip_g, lp_g = _filter_pool(cost_g_org, tip_traj_g_org, log_prior_g_org, thr, self.m)
         result = super()._greedy_select(cost_g_org, tip_traj_g_org, log_prior_g_org, thr)
         if valid_n > self.m:
-            selected = result.detach().cpu().numpy().astype(np.int64)
-            lp = np.zeros(valid_n, dtype=np.float64) if lp_g is None else lp_g.detach().cpu().numpy().astype(np.float64)
-            record = dynamic_trace(
-                cost_g.detach().cpu().numpy().astype(np.float64),
-                tip_g.detach().cpu().numpy().astype(np.float64), lp,
-                float(self.beta), float(self.wJ), self.m, selected,
-            )
-            if self.trace_sink is not None:
-                self.trace_sink(record)
+            # Defer all CPU conversion and diagnostic replay until after the
+            # production improve_policy timing window.
+            self._pending_trace = (cost_g, tip_g, lp_g, result.detach(), valid_n)
         return result
 
-
-class FixedGreedyPlanner(ProductionPlanner):
-    """Planner whose selection stage directly uses fixed-F marginal gains."""
-
-    def __init__(self, *args, trace_sink=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.trace_sink = trace_sink
-
-    @torch.no_grad()
-    def _greedy_select(self, cost_g_org, tip_traj_g_org, log_prior_g_org=None, thr=FILTER_THRESHOLD):
-        valid_n, cost_g, tip_g, lp_g = _filter_pool(cost_g_org, tip_traj_g_org, log_prior_g_org, thr, self.m)
-        if valid_n == 0:
-            warnings.warn("Fixed-F Greedy fallback: no valid candidates", UserWarning)
-            return torch.arange(self.m, device=self.device, dtype=torch.long)
-        if valid_n <= self.m:
-            return torch.arange(self.m, device=self.device, dtype=torch.long)
-        cost = cost_g.detach().cpu().numpy().astype(np.float64)
-        feat = tip_g.detach().cpu().numpy().astype(np.float64).reshape(valid_n, -1)
-        lp = np.zeros(valid_n, dtype=np.float64) if lp_g is None else lp_g.detach().cpu().numpy().astype(np.float64)
-        scores = -REFERENCE_WJ * cost + REFERENCE_PRIOR_WEIGHT * lp
-        selected, trace = fixed_greedy(feat, scores, REFERENCE_BETA, self.m)
-        if self.trace_sink is not None:
-            self.trace_sink({"valid_n": valid_n, "cost": cost, "features": feat,
-                             "log_prior": lp, "scores": scores,
-                             "selected": selected.tolist(), "fixed_trace": trace})
-        return torch.as_tensor(selected, device=self.device, dtype=torch.long)
+    def flush_trace(self) -> None:
+        pending = self._pending_trace
+        self._pending_trace = None
+        if pending is None or self.trace_sink is None:
+            return
+        cost_g, tip_g, lp_g, result, valid_n = pending
+        selected = result.cpu().numpy().astype(np.int64)
+        lp = np.zeros(valid_n, dtype=np.float64) if lp_g is None else lp_g.cpu().numpy().astype(np.float64)
+        self.trace_sink(dynamic_trace(
+            cost_g.cpu().numpy().astype(np.float64),
+            tip_g.cpu().numpy().astype(np.float64), lp,
+            float(self.beta), float(self.wJ), self.m, selected,
+        ))
 
 
-class FixedExhaustivePlanner(ProductionPlanner):
-    """Planner whose selection stage directly uses fixed-F exhaustive search."""
+class PoolNormExhaustivePlanner(ProductionPlanner):
+    """Direct pool-normalized exhaustive selection baseline."""
 
     def __init__(self, *args, trace_sink=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -333,19 +405,18 @@ class FixedExhaustivePlanner(ProductionPlanner):
     def _greedy_select(self, cost_g_org, tip_traj_g_org, log_prior_g_org=None, thr=FILTER_THRESHOLD):
         valid_n, cost_g, tip_g, lp_g = _filter_pool(cost_g_org, tip_traj_g_org, log_prior_g_org, thr, self.m)
         if valid_n == 0:
-            warnings.warn("Fixed-F Exhaustive fallback: no valid candidates", UserWarning)
+            warnings.warn("Pool-Norm Exhaustive fallback: no valid candidates", UserWarning)
             return torch.arange(self.m, device=self.device, dtype=torch.long)
         if valid_n <= self.m:
             return torch.arange(self.m, device=self.device, dtype=torch.long)
         cost = cost_g.detach().cpu().numpy().astype(np.float64)
         feat = tip_g.detach().cpu().numpy().astype(np.float64).reshape(valid_n, -1)
         lp = np.zeros(valid_n, dtype=np.float64) if lp_g is None else lp_g.detach().cpu().numpy().astype(np.float64)
-        scores = -REFERENCE_WJ * cost + REFERENCE_PRIOR_WEIGHT * lp
-        selected, optimum, minimum = fixed_exhaustive(feat, scores, REFERENCE_BETA, self.m)
-        selected = np.sort(selected.astype(np.int64))
+        selected, optimum, minimum, terms = pool_norm_exhaustive(
+            cost, feat, lp, self.m, self.wJ, self.beta, self.prior_weight, return_terms=True)
         if self.trace_sink is not None:
-            self.trace_sink({"valid_n": valid_n, "cost": cost, "features": feat,
-                             "log_prior": lp, "scores": scores,
+            self.trace_sink({"valid_n": valid_n, "diversity_scale": terms["diversity_scale"],
+                             "beta_eff": terms["beta_eff"],
                              "selected": selected.tolist(), "F_opt": optimum,
                              "F_min": minimum})
         return torch.as_tensor(selected, device=self.device, dtype=torch.long)
@@ -373,8 +444,7 @@ class ExperimentConfig:
 def make_planner(kind: str, rope: WarpRope, cfg: ExperimentConfig,
                  device: torch.device, trace_sink=None):
     cls = {"dynamic": DynamicTracePlanner,
-           "fixed-greedy": FixedGreedyPlanner,
-           "fixed-exhaustive": FixedExhaustivePlanner}[kind]
+           "pool-norm-exhaustive": PoolNormExhaustivePlanner}[kind]
     return cls(
         rope, cost_fn, cfg.dt, cfg.ctr_period, cfg.horizon, cfg.n_sample,
         cfg.n_improve, cfg.noise_scale, 3,
@@ -447,11 +517,21 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
     actions: List[np.ndarray] = []
     positions: List[np.ndarray] = []
     goals: List[np.ndarray] = []
+    attached_positions: List[np.ndarray] = []
+    command_goals: List[np.ndarray] = []
     profile: List[Dict[str, float]] = []
     collisions = 0
+    collision_substeps = 0
+    collision_any = False
     prev_hit = False
     wall_times: List[float] = []
     slider_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "slider")
+    rope_tip_site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "S_first")
+    attached_end_site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "S_last")
+    if rope_tip_site_id < 0 or attached_end_site_id < 0:
+        raise RuntimeError("MuJoCo cable endpoint sites S_first/S_last were not found")
+    if rope_tip_site_id == attached_end_site_id:
+        raise RuntimeError("free rope tip and attached endpoint resolved to the same site")
     pcf = PositionCommandFilter(
         np.array([0.0, 0.0, 0.0]), data.sensordata[[0, 1, 2]], cfg.dt
     )
@@ -461,7 +541,12 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
         mj_state[0, 1:1 + mj_node * 3] = data.xpos[1:1 + mj_node][::-1].reshape(-1)
         mj_state[0, 1 + mj_node * 3:-3] = data.sensordata
         pos, vel, _ = mj_data_to_my_data(N, mj_state.astype(np.float32), device=device)
+        if step == 0:
+            state_tip = pos[0, -1].detach().cpu().numpy()
+            if not np.allclose(state_tip, data.site_xpos[rope_tip_site_id], rtol=0.0, atol=1.0e-5):
+                raise AssertionError("S_first does not match pos[..., -1, :] free-tip state")
         goal = goal_builder.get_range(start=step + 1, length=cfg.horizon)
+        tracking_reference = goal[0].detach().cpu().numpy().astype(np.float64, copy=True)
         obs[1, :] = data.xpos[cyl1].copy()
         obs[2, :] = data.xpos[cyl2].copy()
         if device.type == "cuda":
@@ -472,6 +557,8 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
         if device.type == "cuda":
             torch.cuda.synchronize()
         wall_times.append(time.perf_counter() - t0)
+        if isinstance(planner, DynamicTracePlanner):
+            planner.flush_trace()
         if planner.last_profile is not None:
             profile.append(dict(planner.last_profile))
         for _ in range(cfg.ctr_period):
@@ -480,29 +567,39 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
             model.site_pos[0][[0, 1, 2]] = target + np.array([0.0, 0.0, 1.2])
             data.xfrc_applied[slider_id, :3] = np.array([0.0, 0.0, 0.5 * 9.81])
             mujoco.mj_step(model, data)
-        hit = False
-        for ci in range(data.ncon):
-            g1, g2 = data.contact[ci].geom1, data.contact[ci].geom2
-            if ((g1 in rope_geom_ids and g2 in cyl_geom_ids) or
-                    (g2 in rope_geom_ids and g1 in cyl_geom_ids)):
-                hit = True
-                break
-        if hit and not prev_hit:
-            collisions += 1
-        prev_hit = hit
+            hit = any(((data.contact[ci].geom1 in rope_geom_ids and data.contact[ci].geom2 in cyl_geom_ids) or
+                       (data.contact[ci].geom2 in rope_geom_ids and data.contact[ci].geom1 in cyl_geom_ids))
+                      for ci in range(data.ncon))
+            collision_substeps += int(hit)
+            collision_any = collision_any or hit
+            if hit and not prev_hit:
+                collisions += 1
+            prev_hit = hit
         actions.append(action.copy())
-        positions.append(data.site_xpos[-1].copy())
-        goals.append((target + np.array([0.0, 0.0, 1.2])).copy())
+        # S_first is the free rope tip. S_last is constrained to the slider and
+        # therefore measures actuator-end following rather than rope-tip tracking.
+        positions.append(data.site_xpos[rope_tip_site_id].copy())
+        goals.append(tracking_reference)
+        attached_positions.append(data.site_xpos[attached_end_site_id].copy())
+        command_goals.append((target + np.array([0.0, 0.0, 1.2])).copy())
         planner.update_policy()
     pos_arr = np.asarray(positions)
     goal_arr = np.asarray(goals)
+    attached_arr = np.asarray(attached_positions)
+    command_arr = np.asarray(command_goals)
     errors = np.linalg.norm(pos_arr - goal_arr, axis=1)
+    actuator_errors = np.linalg.norm(attached_arr - command_arr, axis=1)
     metrics = {
         "controller": kind, "seed": seed, "steps": len(actions),
         "tracking_rmse": float(np.sqrt(np.mean(errors * errors))),
         "tracking_mean": float(np.mean(errors)),
         "tracking_max": float(np.max(errors)),
+        "actuator_endpoint_rmse": float(np.sqrt(np.mean(actuator_errors * actuator_errors))),
+        "actuator_endpoint_mean": float(np.mean(actuator_errors)),
+        "actuator_endpoint_max": float(np.max(actuator_errors)),
         "collision_count": collisions,
+        "collision_substeps": int(collision_substeps),
+        "collision_any": bool(collision_any),
         "wall_mean_ms": float(np.mean(wall_times) * 1000.0),
         "wall_median_ms": float(np.median(wall_times) * 1000.0),
         "wall_p95_ms": float(np.percentile(wall_times, 95) * 1000.0),
@@ -513,6 +610,8 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
         output_dir.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(output_dir / f"trajectory_{kind}_seed{seed}.npz",
                             actions=np.asarray(actions), positions=pos_arr, goals=goal_arr,
+                            rope_tip_positions=pos_arr, reference_goals=goal_arr,
+                            attached_positions=attached_arr, command_goals=command_arr,
                             wall_times=np.asarray(wall_times))
         with (output_dir / f"traces_{kind}_seed{seed}.pkl").open("wb") as fh:
             pickle.dump(traces, fh, protocol=pickle.HIGHEST_PROTOCOL)
@@ -522,6 +621,30 @@ def run_episode(kind: str, seed: int, cfg: ExperimentConfig,
             json.dumps(metrics, indent=2), encoding="utf-8"
         )
     return {"metrics": metrics, "traces": traces}
+
+
+def validate_saved_episode(run_dir: Path, controller: str, seed: int,
+                           metrics: Dict[str, Any]) -> None:
+    path = run_dir / f"trajectory_{controller}_seed{seed}.npz"
+    with np.load(path) as saved:
+        tip = saved["rope_tip_positions"]
+        reference = saved["reference_goals"]
+        attached = saved["attached_positions"]
+        command = saved["command_goals"]
+        if not np.array_equal(saved["positions"], tip):
+            raise AssertionError(f"positions alias mismatch: {path}")
+        if not np.array_equal(saved["goals"], reference):
+            raise AssertionError(f"goals alias mismatch: {path}")
+        tracking_error = np.linalg.norm(tip - reference, axis=1)
+        actuator_error = np.linalg.norm(attached - command, axis=1)
+        tracking_rmse = float(np.sqrt(np.mean(tracking_error * tracking_error)))
+        actuator_rmse = float(np.sqrt(np.mean(actuator_error * actuator_error)))
+        if not np.isclose(tracking_rmse, float(metrics["tracking_rmse"]), rtol=1e-12, atol=1e-12):
+            raise AssertionError(f"tracking RMSE mismatch: {path}")
+        if not np.isclose(actuator_rmse, float(metrics["actuator_endpoint_rmse"]), rtol=1e-12, atol=1e-12):
+            raise AssertionError(f"actuator endpoint RMSE mismatch: {path}")
+        if np.allclose(tip, attached, rtol=0.0, atol=1e-6):
+            raise AssertionError(f"free tip unexpectedly equals attached endpoint: {path}")
 
 
 def test_math(seed: int = 0) -> Dict[str, Any]:
@@ -535,26 +658,28 @@ def test_math(seed: int = 0) -> Dict[str, Any]:
             z[1] = z[0]
         w = rng.normal(size=m)
         beta = float(rng.uniform(0.0, 10.0))
-        exact, best, worst = fixed_exhaustive(z, w, beta, n)
-        naive_best, naive_best_v, naive_worst, naive_worst_v = naive_exhaustive(z, w, beta, n)
-        if not np.allclose(best, naive_best_v, rtol=1e-10, atol=1e-10) or not np.allclose(worst, naive_worst_v, rtol=1e-10, atol=1e-10):
-            failures.append(f"exhaustive case {case}")
-        greedy, trace = fixed_greedy(z, w, beta, n)
-        for step, row in enumerate(trace):
-            selected = greedy[:step]
-            for candidate in range(m):
-                if candidate in selected:
-                    continue
-                lhs = fixed_objective(z, w, beta, list(selected) + [candidate])
-                base = fixed_objective(z, w, beta, selected)
-                if not np.isclose(row["marginal"][candidate], lhs - base, rtol=1e-9, atol=1e-9):
-                    failures.append(f"marginal case {case} step {step}")
-                    break
-        for selected in (greedy, exact, np.asarray(naive_best)):
-            cert = certificate(z, w, beta, selected)
-            gap = best - cert["F_selected"]
-            if gap < -1e-8 or gap > cert["certificate"] + 1e-7:
-                failures.append(f"certificate case {case}")
+        cost = rng.normal(size=m)
+        lp = w.copy()
+        best, fmax, fmin = pool_norm_exhaustive(cost, z, lp, n)
+        naive_best, naive_max, naive_worst, naive_min = naive_pool_norm_exhaustive(cost, z, lp, n)
+        if not np.array_equal(best, naive_best) or not np.isclose(fmax, naive_max) or not np.isclose(fmin, naive_min):
+            failures.append(f"pool exhaustive case {case}")
+        terms = pool_norm_terms(cost, z, lp)
+        if not np.isclose(fmax, pool_norm_objective(terms, best)):
+            failures.append(f"objective case {case}")
+        selected = np.asarray(rng.choice(m, size=n, replace=False))
+        cert = certificate(z, terms["weights"], terms["beta_eff"], selected)
+        gap = fmax - cert["F_selected"]
+        if gap < -1e-7 or gap > cert["certificate"] + 1e-6:
+            failures.append(f"certificate case {case}")
+    # Degenerate scales must remain finite and deterministic.
+    for cost, z in ((np.ones(5), rng.normal(size=(5, 4))),
+                    (rng.normal(size=5), np.zeros((5, 4))),
+                    (np.ones(5), np.zeros((5, 4)))):
+        terms = pool_norm_terms(cost, z, np.zeros(5))
+        pool_norm_exhaustive(cost, z, np.zeros(5), 3)
+        if terms["cost_norm"].shape != (5,) or not np.all(np.isfinite(terms["weights"])):
+            failures.append("degenerate scales")
     # Translation invariance and constant score shifts.
     z = rng.normal(size=(8, 4)); w = rng.normal(size=8); beta = 2.0
     idx = np.array([0, 2, 5])
@@ -562,7 +687,7 @@ def test_math(seed: int = 0) -> Dict[str, Any]:
         failures.append("feature translation")
     if not np.isclose((fixed_objective(z, w + 3.0, beta, idx) - fixed_objective(z, w, beta, idx)), 9.0, atol=1e-7):
         failures.append("score shift")
-    result = {"passed": not failures, "failures": failures, "cases": 100}
+    result = {"passed": not failures, "failures": failures, "cases": 103}
     if failures:
         raise AssertionError(json.dumps(result))
     return result
@@ -573,7 +698,7 @@ def read_traces(path: Path) -> Iterable[Dict[str, Any]]:
         yield from pickle.load(fh)
 
 
-def analyze_traces(run_dir: Path, seed: int, controller: str) -> List[Dict[str, Any]]:
+def analyze_traces(run_dir: Path, seed: int, controller: str = "dynamic") -> List[Dict[str, Any]]:
     source = run_dir / f"traces_{controller}_seed{seed}.pkl"
     rows: List[Dict[str, Any]] = []
     if not source.exists():
@@ -582,28 +707,31 @@ def analyze_traces(run_dir: Path, seed: int, controller: str) -> List[Dict[str, 
         if record.get("valid_n", 0) <= N_MODES:
             continue
         features = np.asarray(record["features"], dtype=np.float64).reshape(record["valid_n"], -1)
-        scores = -REFERENCE_WJ * np.asarray(record["cost"], dtype=np.float64) + REFERENCE_PRIOR_WEIGHT * np.asarray(record["log_prior"], dtype=np.float64)
+        cost = np.asarray(record["cost"], dtype=np.float64)
+        log_prior = np.asarray(record["log_prior"], dtype=np.float64)
+        terms = pool_norm_terms(cost, features, log_prior)
         gd = np.asarray(record["selected"], dtype=np.int64)
-        gf, _ = fixed_greedy(features, scores, REFERENCE_BETA, N_MODES)
-        exact, fopt, fmin = fixed_exhaustive(features, scores, REFERENCE_BETA, N_MODES)
-        cd = certificate(features, scores, REFERENCE_BETA, gd)
-        cf = certificate(features, scores, REFERENCE_BETA, gf)
+        exact, fopt, fmin = pool_norm_exhaustive(cost, features, log_prior, N_MODES)
+        cd = certificate(features, terms["weights"], terms["beta_eff"], gd)
         fd = cd["F_selected"]
-        ff = cf["F_selected"]
-        gd_gap = fopt - fd
-        gf_gap = fopt - ff
+        raw_gap = float(fopt - fd)
+        scale = float(fopt - fmin)
+        tol = 1e-7 * max(1.0, abs(fopt), abs(fd), abs(cd["certificate"]))
+        gap = 0.0 if abs(raw_gap) <= tol and raw_gap < 0 else raw_gap
+        bound_ok = int(gap >= -tol and gap <= cd["certificate"] + tol)
+        normalized_gap = None if scale < RANGE_TOL else gap / scale
+        normalized_bound = None if scale < RANGE_TOL else cd["certificate"] / scale
         rows.append({
             "seed": seed, "step": step, "M": record["valid_n"],
-            "F_dynamic": fd, "F_fixed_greedy": ff, "F_exact": fopt, "F_min": fmin,
-            "gap_dynamic": gd_gap, "gap_fixed_greedy": gf_gap,
-            "normalization_effect": ff - fd,
-            "bound_dynamic": cd["certificate"], "bound_fixed_greedy": cf["certificate"],
-            "slack_dynamic": cd["certificate"] - gd_gap,
-            "slack_fixed_greedy": cf["certificate"] - gf_gap,
-            "dynamic_bound_ok": int(gd_gap >= -1e-7 and gd_gap <= cd["certificate"] + 1e-7),
-            "fixed_greedy_bound_ok": int(gf_gap >= -1e-7 and gf_gap <= cf["certificate"] + 1e-7),
-            "exact_dynamic": int(np.isclose(fd, fopt, rtol=1e-8, atol=1e-7)),
-            "exact_fixed_greedy": int(np.isclose(ff, fopt, rtol=1e-8, atol=1e-7)),
+            "F_dynamic": fd, "F_exact": fopt, "F_min": fmin, "objective_range": scale,
+            "gap": gap, "raw_gap": raw_gap, "Delta_G": cd["certificate"],
+            "slack": cd["certificate"] - gap, "normalized_gap": normalized_gap,
+            "normalized_bound": normalized_bound,
+            "exact_optimal": int(abs(raw_gap) <= tol), "bound_ok": bound_ok,
+            "cost_range": terms["cost_range"], "R_D": terms["diversity_scale"],
+            "beta_eff": terms["beta_eff"], "cost_degenerate": int(terms["cost_degenerate"]),
+            "diversity_degenerate": int(terms["diversity_degenerate"]),
+            "objective_range_degenerate": int(scale < RANGE_TOL),
         })
     return rows
 
@@ -630,7 +758,10 @@ def write_report(run_dir: Path, metrics: List[Dict[str, Any]], offline: List[Dic
             "episodes": float(len(subset)),
             "rmse_mean": float(np.mean(vals("tracking_rmse"))),
             "rmse_std": float(np.std(vals("tracking_rmse"))),
-            "collision_free_rate": float(np.mean(vals("collision_count") == 0)),
+            "actuator_endpoint_rmse_mean": float(np.mean(vals("actuator_endpoint_rmse"))),
+            "collision_free_rate": float(np.mean(np.asarray([not bool(row.get("collision_any", row.get("collision_count", 0))) for row in subset]))),
+            "collision_event_mean": float(np.mean(vals("collision_count"))),
+            "collision_substeps_mean": float(np.mean(vals("collision_substeps"))),
             "planning_mean_ms": float(np.mean(vals("wall_mean_ms"))),
             "planning_p95_mean_ms": float(np.mean(vals("wall_p95_ms"))),
             "deadline_miss_rate_mean": float(np.mean(vals("deadline_miss_rate"))),
@@ -642,28 +773,32 @@ def write_report(run_dir: Path, metrics: List[Dict[str, Any]], offline: List[Dic
             return np.asarray([float(row[key]) for row in offline], dtype=np.float64)
         offline_summary = {
             "snapshots": float(len(offline)),
-            "dynamic_gap_mean": float(np.mean(ovals("gap_dynamic"))),
-            "dynamic_gap_p95": float(np.percentile(ovals("gap_dynamic"), 95)),
-            "dynamic_gap_max": float(np.max(ovals("gap_dynamic"))),
-            "fixed_greedy_gap_mean": float(np.mean(ovals("gap_fixed_greedy"))),
-            "fixed_greedy_gap_p95": float(np.percentile(ovals("gap_fixed_greedy"), 95)),
-            "fixed_greedy_gap_max": float(np.max(ovals("gap_fixed_greedy"))),
-            "normalization_effect_mean": float(np.mean(ovals("normalization_effect"))),
-            "normalization_effect_min": float(np.min(ovals("normalization_effect"))),
-            "normalization_effect_max": float(np.max(ovals("normalization_effect"))),
-            "dynamic_bound_violations": float(np.sum(ovals("dynamic_bound_ok") < 0.5)),
-            "fixed_greedy_bound_violations": float(np.sum(ovals("fixed_greedy_bound_ok") < 0.5)),
-            "fixed_greedy_exact_frequency": float(np.mean(ovals("exact_fixed_greedy"))),
+            "gap_mean": float(np.mean(ovals("gap"))),
+            "gap_median": float(np.median(ovals("gap"))),
+            "gap_p95": float(np.percentile(ovals("gap"), 95)),
+            "normalized_gap_mean": float(np.mean([float(x) for x in (row["normalized_gap"] for row in offline) if x is not None])),
+            "normalized_gap_median": float(np.median([float(x) for x in (row["normalized_gap"] for row in offline) if x is not None])),
+            "normalized_gap_p95": float(np.percentile([float(x) for x in (row["normalized_gap"] for row in offline) if x is not None], 95)),
+            "bound_mean": float(np.mean(ovals("Delta_G"))),
+            "bound_median": float(np.median(ovals("Delta_G"))),
+            "bound_p95": float(np.percentile(ovals("Delta_G"), 95)),
+            "normalized_bound_mean": float(np.mean([float(x) for x in (row["normalized_bound"] for row in offline) if x is not None])),
+            "normalized_bound_median": float(np.median([float(x) for x in (row["normalized_bound"] for row in offline) if x is not None])),
+            "normalized_bound_p95": float(np.percentile([float(x) for x in (row["normalized_bound"] for row in offline) if x is not None], 95)),
+            "exact_optimal_frequency": float(np.mean(ovals("exact_optimal"))),
+            "bound_violations": float(np.sum(ovals("bound_ok") < 0.5)),
+            "objective_range_degenerate_count": float(np.sum(ovals("objective_range_degenerate") > 0.5)),
         }
     lines = [
         "# BM2PC Greedy Validation Report", "",
         f"Smoke run: `{smoke}`", "",
         "## Objective fidelity", "",
-        "Dynamic-Norm Greedy uses the production cost min-max normalization and per-step dynamic diversity normalization. Fixed-F Greedy and Fixed-F Exhaustive use the fixed reference objective with raw rollout costs, log prior, raw squared Euclidean features, and beta=600.", "",
+        "Dynamic-Norm Greedy calls production Planner._greedy_select() unchanged. Pool-Norm Exhaustive fixes one cost normalization and one diversity scale per filtered pool, then globally maximizes F_norm over all triples. It is not the exact optimum of the production stepwise score.", "",
         "## Offline comparison", "",
-        "`gap_fixed_greedy` is the fixed-F greedy approximation gap. `normalization_effect = F_fixed_greedy - F_dynamic` combines cost normalization and dynamic diversity normalization effects.", "",
+        "The reported gap is F_norm(S_exact)-F_norm(G_dynamic); Delta_G is the a-posteriori certificate using exactly the same pool-normalized weights and beta_eff. Normalized bounds are not clipped and can exceed one; zero objective ranges are excluded from normalized statistics.", "",
         "## Closed-loop comparison", "",
-        "Closed-loop values compare three selection rules under matched initial seeds. Later candidate pools can diverge because selected warm starts and states diverge.", "",
+        "`tracking_rmse` is the free rope tip (`S_first`) error relative to the time-aligned Lemniscate reference `goal_builder.get(step + 1)`, measured after executing that control interval. `actuator_endpoint_rmse` separately reports the attached endpoint (`S_last`) error relative to the filtered actuator command.", "",
+        "Closed-loop values compare two selection rules under matched initial seeds. Tracking is free-tip S_first versus goal_builder.get(step+1) after the control interval. Collision events and substeps scan every MuJoCo substep.", "",
         "## Certificate", "",
         "The certificate is a finite filtered-pool bound for each returned set. It is not an approximation-ratio or stability guarantee.", "",
         "## Aggregate results", "", "```json", json.dumps({"controllers": controller_summary, "offline": offline_summary}, indent=2), "```", "",
@@ -684,13 +819,13 @@ def generate_artifacts(run_dir: Path, metrics: List[Dict[str, Any]], offline: Li
     fig_dir = run_dir / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
     if offline:
-        dyn = np.sort(np.asarray([float(row["gap_dynamic"]) for row in offline]))
-        fix = np.sort(np.asarray([float(row["gap_fixed_greedy"]) for row in offline]))
+        dyn = np.sort(np.asarray([float(row["gap"]) for row in offline]))
+        bound = np.sort(np.asarray([float(row["Delta_G"]) for row in offline]))
         fig, ax = plt.subplots(figsize=(6.0, 4.0))
-        for values, label, color in ((dyn, "Dynamic-Norm", "tab:blue"), (fix, "Fixed-F Greedy", "tab:orange")):
+        for values, label, color in ((dyn, "Dynamic-Norm gap", "tab:blue"), (bound, "Delta_G bound", "tab:orange")):
             y = np.linspace(1.0 / len(values), 1.0, len(values))
             ax.plot(values, y, label=label, color=color)
-        ax.set_xlabel("Fixed-F objective gap")
+        ax.set_xlabel("Pool-normalized objective gap / certificate")
         ax.set_ylabel("Empirical CDF")
         ax.grid(alpha=0.25)
         ax.legend()
@@ -704,7 +839,7 @@ def generate_artifacts(run_dir: Path, metrics: List[Dict[str, Any]], offline: Li
         mean_time = [np.mean([float(row["wall_mean_ms"]) for row in metrics if row["controller"] == method]) for method in methods]
         fig, axes = plt.subplots(1, 2, figsize=(9.0, 3.8))
         axes[0].bar(methods, mean_rmse, color=["tab:blue", "tab:orange", "tab:green"][:len(methods)])
-        axes[0].set_ylabel("Tracking RMSE")
+        axes[0].set_ylabel("Rope-tip tracking RMSE (m)")
         axes[0].tick_params(axis="x", rotation=25)
         axes[1].bar(methods, mean_time, color=["tab:blue", "tab:orange", "tab:green"][:len(methods)])
         axes[1].axhline(25.0, color="black", linestyle="--", linewidth=1)
@@ -715,11 +850,17 @@ def generate_artifacts(run_dir: Path, metrics: List[Dict[str, Any]], offline: Li
         fig.savefig(fig_dir / "closed_loop_summary.png", dpi=180)
         plt.close(fig)
         fig, ax = plt.subplots(figsize=(6.0, 4.0))
+        reference_plotted = False
         for method, color in zip(methods, ["tab:blue", "tab:orange", "tab:green"]):
             path = run_dir / f"trajectory_{method}_seed0.npz"
             if path.exists():
-                traj = np.load(path)["positions"]
+                saved = np.load(path)
+                traj = saved["rope_tip_positions"]
                 ax.plot(traj[:, 0], traj[:, 1], label=method, color=color)
+                if not reference_plotted:
+                    reference = saved["reference_goals"]
+                    ax.plot(reference[:, 0], reference[:, 1], "k--", label="Lemniscate reference")
+                    reference_plotted = True
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.grid(alpha=0.25)
@@ -739,8 +880,8 @@ $0\le F(S^\star)-F(G)\le\Delta_G$ where
 $\Delta_G=\sum_{i\in H}h_i-\sum_{i\in G}h_i$.
 \end{proposition}
 
-The proposition evaluates the returned set relative to the fixed reference
-objective. It does not assert that the production Dynamic-Norm selector
+The proposition evaluates the returned set relative to the fixed pool-normalized
+reference objective. It does not assert that the production Dynamic-Norm selector
 maximizes this objective at each marginal step.
 """
     (run_dir / "theory_and_paper_text.tex").write_text(tex, encoding="utf-8")
@@ -767,8 +908,7 @@ def write_audit_and_timing(run_dir: Path, metrics: List[Dict[str, Any]]) -> None
         "`-850 * norm(cost) + 600 * norm(cumulative_squared_distance) + log_prior`.",
         "",
         f"Normalization uses epsilon={EPS:g} in the denominator and returns zeros when range < {RANGE_TOL:g}.",
-        "The fixed reference objective uses raw rollout cost and raw squared Euclidean features.",
-        "The difference between Fixed-F Greedy and Dynamic-Norm is therefore a combined cost-and-diversity normalization effect.",
+        "Pool-Norm Exhaustive fixes J_norm and R_D once per filtered pool; required conversion and enumeration are included in its multimodal selection timing.",
         "",
         "## Effective raw slopes",
         "",
@@ -799,7 +939,7 @@ def run_experiment(run_dir: Path, seeds: Sequence[int], smoke: bool = False) -> 
     (run_dir / "config.json").write_text(json.dumps({**cfg.__dict__, "seeds": list(seeds)}, indent=2), encoding="utf-8")
     all_metrics: List[Dict[str, Any]] = []
     offline: List[Dict[str, Any]] = []
-    controllers = ["dynamic", "fixed-greedy", "fixed-exhaustive"]
+    controllers = ["dynamic", "pool-norm-exhaustive"]
     for seed in seeds:
         for controller in controllers:
             print(f"RUN controller={controller} seed={seed}", flush=True)
@@ -810,15 +950,29 @@ def run_experiment(run_dir: Path, seeds: Sequence[int], smoke: bool = False) -> 
                 check=True,
             )
             metrics_path = run_dir / f"metrics_{controller}_seed{seed}.json"
-            all_metrics.append(json.loads(metrics_path.read_text(encoding="utf-8")))
+            episode_metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+            validate_saved_episode(run_dir, controller, seed, episode_metrics)
+            all_metrics.append(episode_metrics)
         rows = analyze_traces(run_dir, seed, "dynamic")
         offline.extend(rows)
         write_csv(run_dir / "per_snapshot_metrics.csv", offline)
         write_csv(run_dir / "closed_loop_metrics.csv", all_metrics)
         print(f"DONE seed={seed} offline_snapshots={len(rows)}", flush=True)
     write_report(run_dir, all_metrics, offline, smoke)
+    generate_artifacts(run_dir, all_metrics, offline)
+    write_audit_and_timing(run_dir, all_metrics)
     manifest = {"seeds": list(seeds), "controllers": controllers,
                 "production_files_unchanged": True, "smoke": smoke,
+                "objective": "sum(-850*J_norm + log_prior) + beta_eff*sum_pairwise(D)",
+                "normalization": {"epsilon": EPS, "range_tolerance": RANGE_TOL,
+                                  "beta_eff": "600/(R_D+1e-8), zero when R_D<1e-12"},
+                "pool_norm_is_global_fixed_objective": True,
+                "dynamic_is_production_greedy": True,
+                "selection_timing": "dynamic trace CPU diagnostics deferred; pool CPU conversion/pairwise/exhaustive included",
+                "tracking_metric": "S_first free rope tip vs goal_builder.get(step + 1), post-execution",
+                "actuator_endpoint_metric": "S_last attached endpoint vs filtered command target",
+                "collision_metric": "rope-cylinder contact rising-edge events and substeps scanned at every MuJoCo substep",
+                "closed_loop_metric_consistency": True,
                 "offline_rows": len(offline), "metrics_rows": len(all_metrics)}
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
@@ -828,7 +982,7 @@ def main() -> None:
     parser.add_argument("command", choices=["test", "smoke", "full", "episode", "collect", "analyze", "benchmark", "report"])
     parser.add_argument("--run-dir", type=Path, default=None)
     parser.add_argument("--seeds", nargs="*", type=int, default=None)
-    parser.add_argument("--controller", choices=["dynamic", "fixed-greedy", "fixed-exhaustive"], default=None)
+    parser.add_argument("--controller", choices=["dynamic", "pool-norm-exhaustive"], default=None)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     run_dir = args.run_dir or (ROOT / "results" / "bm2pc_greedy_validation" / time.strftime("%Y%m%d_%H%M%S"))
@@ -846,7 +1000,6 @@ def main() -> None:
         return
     if args.command == "full":
         test_math()
-        run_experiment(run_dir, [0], smoke=True)
         run_experiment(run_dir, list(range(10)), smoke=False)
         return
     if args.command == "collect":
@@ -874,16 +1027,24 @@ def main() -> None:
         if path.exists():
             with path.open(newline="", encoding="utf-8") as fh:
                 offline = list(csv.DictReader(fh))
-        write_report(run_dir, metrics, offline, False)
+        write_report(run_dir, metrics, offline, "smoke" in run_dir.name)
         generate_artifacts(run_dir, metrics, offline)
         write_audit_and_timing(run_dir, metrics)
         manifest = {
             "git_commit": None,
-            "controllers": ["dynamic", "fixed-greedy", "fixed-exhaustive"],
+            "controllers": ["dynamic", "pool-norm-exhaustive"],
             "seeds": sorted({int(row["seed"]) for row in metrics}) if metrics else [],
+            "smoke": "smoke" in run_dir.name,
             "episodes": len(metrics),
             "offline_snapshots": len(offline),
             "production_sources_modified": False,
+            "objective": "sum(-850*J_norm + log_prior) + beta_eff*sum_pairwise(D)",
+            "normalization": {"epsilon": EPS, "range_tolerance": RANGE_TOL,
+                              "beta_eff": "600/(R_D+1e-8), zero when R_D<1e-12"},
+            "selection_timing": "dynamic trace CPU diagnostics deferred; pool CPU conversion/pairwise/exhaustive included",
+            "tracking_metric": "S_first free rope tip vs goal_builder.get(step + 1), post-execution",
+            "actuator_endpoint_metric": "S_last attached endpoint vs filtered command target",
+            "closed_loop_metric_consistency": True,
             "python": sys.executable,
         }
         try:
@@ -891,6 +1052,11 @@ def main() -> None:
             manifest["git_commit"] = _sp.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         except Exception:
             pass
+        cfg = ExperimentConfig()
+        (run_dir / "config.json").write_text(
+            json.dumps({**cfg.__dict__, "seeds": manifest["seeds"]}, indent=2),
+            encoding="utf-8",
+        )
         (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         return
     if args.command == "benchmark":
