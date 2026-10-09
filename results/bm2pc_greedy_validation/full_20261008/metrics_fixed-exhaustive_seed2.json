@@ -1,0 +1,14 @@
+{
+  "controller": "fixed-exhaustive",
+  "seed": 2,
+  "steps": 440,
+  "tracking_rmse": 0.007225246081303838,
+  "tracking_mean": 0.006809251795340231,
+  "tracking_max": 0.013687284690034503,
+  "collision_count": 0,
+  "wall_mean_ms": 88.945273863448,
+  "wall_median_ms": 86.9080499978736,
+  "wall_p95_ms": 109.95602499460797,
+  "deadline_miss_rate": 0.9886363636363636,
+  "fallback_count": 0
+}

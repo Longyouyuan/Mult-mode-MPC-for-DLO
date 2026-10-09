@@ -1,0 +1,14 @@
+{
+  "controller": "fixed-greedy",
+  "seed": 5,
+  "steps": 440,
+  "tracking_rmse": 0.007217911039722854,
+  "tracking_mean": 0.006806495568150104,
+  "tracking_max": 0.012329203688596295,
+  "collision_count": 0,
+  "wall_mean_ms": 15.52935340918008,
+  "wall_median_ms": 14.049949997570366,
+  "wall_p95_ms": 21.202925009129096,
+  "deadline_miss_rate": 0.011363636363636364,
+  "fallback_count": 1
+}

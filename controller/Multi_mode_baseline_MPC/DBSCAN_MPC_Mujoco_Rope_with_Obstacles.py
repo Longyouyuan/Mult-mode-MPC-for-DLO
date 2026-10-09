@@ -158,14 +158,14 @@ horizon = 35
 
 # ===== DBSCAN-MPC 参数 =====
 n_sample = 402 * 1   # rollout batch = 1 + n_sample
-n_improve = 1
+n_improve = 10
 noise_scale = 2.0
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
 # DBSCAN 超参
-top_k_good = 200 * 3     # 保持原来的 good pool 规模；DBSCAN 会先 top-k，再过滤碰撞
+top_k_good = 200 * 1     # 保持原来的 good pool 规模；DBSCAN 会先 top-k，再过滤碰撞
 dbscan_eps = 5.0         # 若 cluster 太少/全 noise，可增大；若全部合成一类，可减小
 dbscan_min_samples = 5
 collision_thr = 1e5
@@ -176,7 +176,7 @@ max_draw_clusters = 10       # 类似原来的 m_modes，只用于画 cluster re
 members_per_cluster = 8     # 每个 cluster 再画几个其它成员，类似 cand_tip_traj
 k_cand_fallback = max_draw_clusters * max(1, members_per_cluster)
 
-visualization = False
+visualization = True
 
 # ===================== Device =====================
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

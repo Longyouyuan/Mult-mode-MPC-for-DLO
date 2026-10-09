@@ -15,5 +15,9 @@ __pycache__/
 # Large local experiment data
 /test_for_real_experiment/franka_data/*.csv
 
+# BM2PC validation raw traces (large local artifacts)
+/results/bm2pc_greedy_validation/**/*.pkl
+/results/bm2pc_greedy_validation/**/traces_*.jsonl
+
 # Large local presentation artifact
 /report.pptx

@@ -1,0 +1,14 @@
+{
+  "controller": "dynamic",
+  "seed": 5,
+  "steps": 440,
+  "tracking_rmse": 0.0073916329457154074,
+  "tracking_mean": 0.006942174074350569,
+  "tracking_max": 0.012841382553820573,
+  "collision_count": 0,
+  "wall_mean_ms": 18.72865591007708,
+  "wall_median_ms": 16.787649990874343,
+  "wall_p95_ms": 24.84592500695726,
+  "deadline_miss_rate": 0.04772727272727273,
+  "fallback_count": 0
+}

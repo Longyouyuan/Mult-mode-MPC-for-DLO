@@ -1,0 +1,55 @@
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+init from E:/Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment/franka_dynamic_gru_encoder/stage1_lr1e-3/best_model.pt: val 0.636 cm
+epoch 001 | 172s | train 0.555 cm | val 0.586 cm | val loss 1.890e-04
+epoch 002 | 170s | train 0.534 cm | val 0.601 cm | val loss 1.902e-04
+epoch 003 | 171s | train 0.534 cm | val 0.597 cm | val loss 1.898e-04
+epoch 004 | 170s | train 0.533 cm | val 0.601 cm | val loss 1.926e-04
+epoch 005 | 171s | train 0.532 cm | val 0.583 cm | val loss 1.857e-04
+epoch 006 | 172s | train 0.530 cm | val 0.586 cm | val loss 1.870e-04
+epoch 007 | 170s | train 0.527 cm | val 0.602 cm | val loss 1.872e-04
+epoch 008 | 171s | train 0.528 cm | val 0.576 cm | val loss 1.834e-04
+epoch 009 | 171s | train 0.526 cm | val 0.615 cm | val loss 1.873e-04
+epoch 010 | 171s | train 0.525 cm | val 0.593 cm | val loss 1.836e-04
+epoch 011 | 170s | train 0.523 cm | val 0.580 cm | val loss 1.824e-04
+epoch 012 | 171s | train 0.523 cm | val 0.586 cm | val loss 1.819e-04
+epoch 013 | 171s | train 0.522 cm | val 0.572 cm | val loss 1.800e-04
+epoch 014 | 170s | train 0.519 cm | val 0.573 cm | val loss 1.796e-04
+epoch 015 | 170s | train 0.520 cm | val 0.569 cm | val loss 1.787e-04
+epoch 016 | 171s | train 0.519 cm | val 0.581 cm | val loss 1.785e-04
+epoch 017 | 170s | train 0.515 cm | val 0.605 cm | val loss 1.856e-04
+epoch 018 | 171s | train 0.518 cm | val 0.578 cm | val loss 1.779e-04
+epoch 019 | 171s | train 0.515 cm | val 0.599 cm | val loss 1.807e-04
+epoch 020 | 170s | train 0.513 cm | val 0.565 cm | val loss 1.744e-04
+epoch 021 | 170s | train 0.509 cm | val 0.594 cm | val loss 1.797e-04
+epoch 022 | 172s | train 0.509 cm | val 0.560 cm | val loss 1.733e-04
+epoch 023 | 171s | train 0.507 cm | val 0.554 cm | val loss 1.718e-04
+epoch 024 | 171s | train 0.506 cm | val 0.602 cm | val loss 1.779e-04
+epoch 025 | 171s | train 0.509 cm | val 0.583 cm | val loss 1.742e-04
+epoch 026 | 170s | train 0.505 cm | val 0.561 cm | val loss 1.727e-04
+epoch 027 | 170s | train 0.502 cm | val 0.559 cm | val loss 1.727e-04
+epoch 028 | 170s | train 0.503 cm | val 0.547 cm | val loss 1.683e-04
+epoch 029 | 171s | train 0.503 cm | val 0.569 cm | val loss 1.742e-04
+epoch 030 | 171s | train 0.500 cm | val 0.620 cm | val loss 1.804e-04
+epoch 031 | 171s | train 0.501 cm | val 0.555 cm | val loss 1.693e-04
+epoch 032 | 170s | train 0.497 cm | val 0.562 cm | val loss 1.710e-04
+epoch 033 | 171s | train 0.497 cm | val 0.539 cm | val loss 1.657e-04
+epoch 034 | 171s | train 0.496 cm | val 0.564 cm | val loss 1.707e-04
+epoch 035 | 168s | train 0.495 cm | val 0.537 cm | val loss 1.648e-04
+epoch 036 | 172s | train 0.495 cm | val 0.541 cm | val loss 1.660e-04
+epoch 037 | 171s | train 0.492 cm | val 0.545 cm | val loss 1.669e-04
+epoch 038 | 171s | train 0.493 cm | val 0.536 cm | val loss 1.645e-04
+epoch 039 | 172s | train 0.489 cm | val 0.548 cm | val loss 1.644e-04
+epoch 040 | 171s | train 0.490 cm | val 0.552 cm | val loss 1.638e-04
+epoch 041 | 171s | train 0.493 cm | val 0.537 cm | val loss 1.629e-04
+epoch 042 | 171s | train 0.487 cm | val 0.546 cm | val loss 1.652e-04
+epoch 043 | 171s | train 0.489 cm | val 0.530 cm | val loss 1.622e-04
+epoch 044 | 172s | train 0.486 cm | val 0.538 cm | val loss 1.605e-04
+epoch 045 | 172s | train 0.484 cm | val 0.543 cm | val loss 1.624e-04
+epoch 046 | 171s | train 0.483 cm | val 0.529 cm | val loss 1.585e-04
+epoch 047 | 171s | train 0.481 cm | val 0.537 cm | val loss 1.619e-04
+epoch 048 | 171s | train 0.480 cm | val 0.531 cm | val loss 1.597e-04
+epoch 049 | 170s | train 0.481 cm | val 0.546 cm | val loss 1.614e-04
+epoch 050 | 172s | train 0.479 cm | val 0.566 cm | val loss 1.628e-04
+test ee_collection_run1 0.604 cm
+test ee_collection_run3 0.576 cm
+Done.

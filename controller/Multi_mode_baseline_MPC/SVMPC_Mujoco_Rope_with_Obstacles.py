@@ -56,13 +56,13 @@ m_modes = 3
 assert n_sample % m_modes == 0
 
 n_improve = 2
-noise_scale = 2.0
+noise_scale = 1.5
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])
 total_horizon = int(total_steps / ctr_period)
 
 # diversity 超参（SVMPC 中仅为兼容 M2PC 接口；实际不参与 SVGD）
-top_k_good = 200 * 3
+top_k_good = 200 * 1
 beta = 1.0
 wJ = 1.5
 
