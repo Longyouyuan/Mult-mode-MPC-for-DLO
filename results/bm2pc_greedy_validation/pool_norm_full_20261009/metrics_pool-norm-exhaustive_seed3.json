@@ -1,0 +1,19 @@
+{
+  "controller": "pool-norm-exhaustive",
+  "seed": 3,
+  "steps": 440,
+  "tracking_rmse": 0.06314156472154431,
+  "tracking_mean": 0.048836994951007955,
+  "tracking_max": 0.20618698728427812,
+  "actuator_endpoint_rmse": 0.007335774083237418,
+  "actuator_endpoint_mean": 0.006876346333907999,
+  "actuator_endpoint_max": 0.013547458028374615,
+  "collision_count": 0,
+  "collision_substeps": 0,
+  "collision_any": false,
+  "wall_mean_ms": 104.02758522706624,
+  "wall_median_ms": 104.2456499999389,
+  "wall_p95_ms": 119.22266500623662,
+  "deadline_miss_rate": 0.9931818181818182,
+  "fallback_count": 0
+}

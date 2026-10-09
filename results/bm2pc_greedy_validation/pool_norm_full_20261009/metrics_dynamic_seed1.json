@@ -1,0 +1,19 @@
+{
+  "controller": "dynamic",
+  "seed": 1,
+  "steps": 440,
+  "tracking_rmse": 0.06408036657736754,
+  "tracking_mean": 0.04812293092812167,
+  "tracking_max": 0.20427290641544996,
+  "actuator_endpoint_rmse": 0.007360464990316486,
+  "actuator_endpoint_mean": 0.0069263387412220176,
+  "actuator_endpoint_max": 0.012660898257624347,
+  "collision_count": 0,
+  "collision_substeps": 0,
+  "collision_any": false,
+  "wall_mean_ms": 14.948121819576375,
+  "wall_median_ms": 13.968750005005859,
+  "wall_p95_ms": 18.504945012682573,
+  "deadline_miss_rate": 0.004545454545454545,
+  "fallback_count": 0
+}

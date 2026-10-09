@@ -1,0 +1,29 @@
+{
+  "dt": 0.001,
+  "ctr_period": 25,
+  "horizon": 35,
+  "n_sample": 402,
+  "m_modes": 3,
+  "n_improve": 1,
+  "noise_scale": 1.5,
+  "top_k_good": 200,
+  "beta": 600.0,
+  "wj": 850.0,
+  "prior_weight": 1.0,
+  "task_duration": 5.0,
+  "filtering_threshold": 100000.0,
+  "action_low": -5.0,
+  "action_high": 5.0,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "git_commit": "fb695b2",
+  "controllers": [
+    "dynamic",
+    "pool-norm-exhaustive"
+  ],
+  "seeds": [
+    0
+  ],
+  "smoke": true,
+  "episodes": 2,
+  "offline_snapshots": 440,
+  "production_sources_modified": false,
+  "objective": "sum(-850*J_norm + log_prior) + beta_eff*sum_pairwise(D)",
+  "normalization": {
+    "epsilon": 1e-08,
+    "range_tolerance": 1e-12,
+    "beta_eff": "600/(R_D+1e-8), zero when R_D<1e-12"
+  },
+  "selection_timing": "dynamic trace CPU diagnostics deferred; pool CPU conversion/pairwise/exhaustive included",
+  "tracking_metric": "S_first free rope tip vs goal_builder.get(step + 1), post-execution",
+  "actuator_endpoint_metric": "S_last attached endpoint vs filtered command target",
+  "closed_loop_metric_consistency": true,
+  "python": "D:\\Anaconda\\envs\\DRL\\python.exe"
+}

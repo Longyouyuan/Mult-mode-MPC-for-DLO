@@ -1,0 +1,35 @@
+{
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "controllers": [
+    "dynamic",
+    "pool-norm-exhaustive"
+  ],
+  "production_files_unchanged": true,
+  "smoke": false,
+  "objective": "sum(-850*J_norm + log_prior) + beta_eff*sum_pairwise(D)",
+  "normalization": {
+    "epsilon": 1e-08,
+    "range_tolerance": 1e-12,
+    "beta_eff": "600/(R_D+1e-8), zero when R_D<1e-12"
+  },
+  "pool_norm_is_global_fixed_objective": true,
+  "dynamic_is_production_greedy": true,
+  "selection_timing": "dynamic trace CPU diagnostics deferred; pool CPU conversion/pairwise/exhaustive included",
+  "tracking_metric": "S_first free rope tip vs goal_builder.get(step + 1), post-execution",
+  "actuator_endpoint_metric": "S_last attached endpoint vs filtered command target",
+  "collision_metric": "rope-cylinder contact rising-edge events and substeps scanned at every MuJoCo substep",
+  "closed_loop_metric_consistency": true,
+  "offline_rows": 4375,
+  "metrics_rows": 20
+}
