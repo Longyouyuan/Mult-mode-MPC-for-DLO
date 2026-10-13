@@ -1,0 +1,15 @@
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+init from E:/Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment/franka_dynamic/best_model.pt: val 0.377 cm
+epoch 001 | 200s | train 0.361 cm | val 0.387 cm | val loss 1.091e-04 | test run1 0.387 run3 0.373 pooled 0.380 cm
+epoch 002 | 205s | train 0.354 cm | val 0.384 cm | val loss 1.084e-04 | test run1 0.397 run3 0.368 pooled 0.383 cm
+epoch 003 | 201s | train 0.354 cm | val 0.376 cm | val loss 1.060e-04 | test run1 0.388 run3 0.358 pooled 0.373 cm
+epoch 004 | 218s | train 0.353 cm | val 0.395 cm | val loss 1.110e-04 | test run1 0.399 run3 0.370 pooled 0.385 cm
+epoch 005 | 220s | train 0.354 cm | val 0.372 cm | val loss 1.050e-04 | test run1 0.380 run3 0.354 pooled 0.367 cm
+epoch 006 | 192s | train 0.353 cm | val 0.410 cm | val loss 1.117e-04 | test run1 0.432 run3 0.399 pooled 0.416 cm
+epoch 007 | 191s | train 0.354 cm | val 0.393 cm | val loss 1.087e-04 | test run1 0.405 run3 0.378 pooled 0.392 cm
+epoch 008 | 180s | train 0.349 cm | val 0.423 cm | val loss 1.133e-04 | test run1 0.430 run3 0.402 pooled 0.416 cm
+epoch 009 | 197s | train 0.353 cm | val 0.376 cm | val loss 1.054e-04 | test run1 0.388 run3 0.363 pooled 0.375 cm
+epoch 010 | 223s | train 0.351 cm | val 0.432 cm | val loss 1.145e-04 | test run1 0.441 run3 0.431 pooled 0.436 cm
+test ee_collection_run1 0.380 cm
+test ee_collection_run3 0.354 cm
+Done.

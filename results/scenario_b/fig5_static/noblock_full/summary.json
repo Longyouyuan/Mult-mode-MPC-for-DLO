@@ -1,0 +1,14 @@
+{
+  "tau=0.75/full": {
+    "events": 40,
+    "collision_rate": 0.0,
+    "switch_rate": 0.0,
+    "detour_rate": 0.0,
+    "alt_mode_available": 1.0,
+    "event_max_err_mean": 0.1673310524713588,
+    "infeasible_steps_mean": 0.525,
+    "rmse_mean": 0.06224712994459407,
+    "rmse_std": 0.004797177036360469,
+    "wall_ms": 20.778168499647023
+  }
+}

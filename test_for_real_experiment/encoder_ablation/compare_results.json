@@ -1,0 +1,123 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+  "ckpt_no_encoder": "E:/Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment/franka_dynamic/best_model.pt",
+  "ckpt_encoder": "E:/Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment/franka_dynamic_gru_encoder/warmstart_enc/best_model.pt",
+  "accuracy": {
+    "val (run2 last 15%)": {
+      "no_encoder": {
+        "avg_max_pos_err_cm": 0.37771430737553546,
+        "final_pos_err_cm": 0.21909505704781335,
+        "pos_rmse_cm": 0.21864931592480058,
+        "vel_rmse_cm_s": 1.6703903670019355,
+        "windows": 9418
+      },
+      "encoder": {
+        "avg_max_pos_err_cm": 0.37170771163698213,
+        "final_pos_err_cm": 0.21693616200465513,
+        "pos_rmse_cm": 0.21582633235704424,
+        "vel_rmse_cm_s": 1.656446278233,
+        "windows": 9418
+      }
+    },
+    "test run1": {
+      "no_encoder": {
+        "avg_max_pos_err_cm": 0.3857821008722781,
+        "final_pos_err_cm": 0.22525355961827148,
+        "pos_rmse_cm": 0.22385244697481133,
+        "vel_rmse_cm_s": 1.726817638181867,
+        "windows": 6306
+      },
+      "encoder": {
+        "avg_max_pos_err_cm": 0.3898822765973421,
+        "final_pos_err_cm": 0.23205294671075288,
+        "pos_rmse_cm": 0.23055558393308934,
+        "vel_rmse_cm_s": 1.7129835154235187,
+        "windows": 6306
+      }
+    },
+    "test run3": {
+      "no_encoder": {
+        "avg_max_pos_err_cm": 0.3672250496463393,
+        "final_pos_err_cm": 0.2328527344620292,
+        "pos_rmse_cm": 0.2301286387345252,
+        "vel_rmse_cm_s": 1.663853225763755,
+        "windows": 6159
+      },
+      "encoder": {
+        "avg_max_pos_err_cm": 0.3623130413585523,
+        "final_pos_err_cm": 0.2291400450683875,
+        "pos_rmse_cm": 0.22701738989571457,
+        "vel_rmse_cm_s": 1.65875296060165,
+        "windows": 6159
+      }
+    }
+  },
+  "timing_torch": {
+    "B=1, 750 steps": {
+      "no_encoder_rollout": {
+        "mean_ms": 240.03301999982796,
+        "std_ms": 30.88548030183846,
+        "median_ms": 229.33534999901894,
+        "n": 10
+      },
+      "encoder_rollout(per-sample encoder)": {
+        "mean_ms": 226.81046000034257,
+        "std_ms": 16.316146044319602,
+        "median_ms": 219.8678499999005,
+        "n": 10
+      },
+      "encoder_only(shared, B=1)": {
+        "mean_ms": 0.3467520000140212,
+        "std_ms": 0.24332526579589872,
+        "median_ms": 0.2817999993567355,
+        "n": 200
+      },
+      "encoder_only(per-sample)": {
+        "mean_ms": 0.24469550005051133,
+        "std_ms": 0.03135085850880519,
+        "median_ms": 0.2365000000281725,
+        "n": 200
+      }
+    },
+    "B=1001, 750 steps": {
+      "no_encoder_rollout": {
+        "mean_ms": 240.19522999988112,
+        "std_ms": 23.55488032425476,
+        "median_ms": 233.06214999956865,
+        "n": 10
+      },
+      "encoder_rollout(per-sample encoder)": {
+        "mean_ms": 227.74237999983598,
+        "std_ms": 9.766134280700642,
+        "median_ms": 228.48579999936192,
+        "n": 10
+      },
+      "encoder_only(shared, B=1)": {
+        "mean_ms": 0.2206134999232745,
+        "std_ms": 0.05332402243020517,
+        "median_ms": 0.2042500000243308,
+        "n": 200
+      },
+      "encoder_only(per-sample)": {
+        "mean_ms": 1.0374654999668564,
+        "std_ms": 0.09556169512423679,
+        "median_ms": 0.9819000006245915,
+        "n": 200
+      }
+    }
+  },
+  "timing_warp": {
+    "no_encoder": {
+      "mean_ms": 308.33348600004683,
+      "std_ms": 1.4193003347992739,
+      "median_ms": 307.35720000029687,
+      "n": 50
+    },
+    "encoder": {
+      "mean_ms": 307.7086280000367,
+      "std_ms": 0.1909718922251977,
+      "median_ms": 307.65024999982415,
+      "n": 50
+    }
+  }
+}

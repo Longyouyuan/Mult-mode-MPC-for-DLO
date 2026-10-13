@@ -1,0 +1,5 @@
+controller,seed,event,tau,block,cross_step,blocked_side,taken_side,outcome,collision,switched,collision_steps,infeasible_steps,event_max_err,event_rmse,tip_clearance_A,alt_mode_available
+beta0,0,0,0.4,False,140,,1,no_block,False,False,0,13,0.18187450065713817,0.10355807102913214,0.07816447071275338,False
+beta0,0,1,0.4,False,235,,-1,no_block,False,False,0,3,0.317731849471441,0.1572838500703748,0.0739884762155764,False
+beta0,0,2,0.4,False,329,,-1,no_block,False,False,0,6,0.18155709015577826,0.0932231646832182,0.08342393610569551,False
+beta0,0,3,0.4,False,423,,1,no_block,False,False,0,0,0.24589541811405105,0.13950711444467337,0.07468773301369133,False

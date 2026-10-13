@@ -1,0 +1,45 @@
+E:\Desktop\Mult-mode-MPC-for-DLO\controller\M2PC.py:225: UserWarning: [greedy_select] valid_n=0 (all cost >= 1.00e+05). Fallback: return first 3 indices.
+  warnings.warn(
+Warp 1.11.1 initialized:
+   CUDA Toolkit 12.9, Driver 12.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 3060 Laptop GPU" (6 GiB, sm_86, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\Lenovo\AppData\Local\NVIDIA\warp\Cache\1.11.1
+Module common.rope_warp_4 a44d163 load on device 'cuda:0' took 3.14 ms  (cached)
+tau=0.75 full   seed=0 rmse=11.27cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (33.5s)
+tau=0.75 full   seed=1 rmse=9.06cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (32.1s)
+tau=0.75 full   seed=2 rmse=9.25cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (30.8s)
+tau=0.75 full   seed=3 rmse=9.04cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (30.6s)
+tau=0.75 full   seed=4 rmse=10.26cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 0] (30.8s)
+tau=0.75 full   seed=5 rmse=8.97cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (27.5s)
+tau=0.75 full   seed=6 rmse=10.14cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (26.4s)
+tau=0.75 full   seed=7 rmse=11.56cm coll_steps=3 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[1, 1, 1, 1] (29.4s)
+tau=0.75 full   seed=8 rmse=10.03cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (31.2s)
+tau=0.75 full   seed=9 rmse=15.55cm coll_steps=12 outcomes=['no_block', 'collision', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (28.7s)
+tau=0.75 n1     seed=0 rmse=31.26cm coll_steps=26 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.3s)
+tau=0.75 n1     seed=1 rmse=30.85cm coll_steps=12 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[0, 0, 0, 0] (24.9s)
+tau=0.75 n1     seed=2 rmse=12.64cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.2s)
+tau=0.75 n1     seed=3 rmse=10.46cm coll_steps=2 outcomes=['collision', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (26.1s)
+tau=0.75 n1     seed=4 rmse=38.21cm coll_steps=8 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.1s)
+tau=0.75 n1     seed=5 rmse=11.76cm coll_steps=4 outcomes=['no_block', 'collision', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.4s)
+tau=0.75 n1     seed=6 rmse=23.16cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (26.2s)
+tau=0.75 n1     seed=7 rmse=11.13cm coll_steps=3 outcomes=['collision', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.1s)
+tau=0.75 n1     seed=8 rmse=9.25cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.1s)
+tau=0.75 n1     seed=9 rmse=19.59cm coll_steps=3 outcomes=['collision', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (25.5s)
+tau=0.75 beta0  seed=0 rmse=10.23cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (29.9s)
+WARNING: Nan, Inf or huge value in QACC at DOF 110. The simulation is unstable. Time = 10.8450.
+
+tau=0.75 beta0  seed=1 rmse=72.23cm coll_steps=32 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[1, 1, 1, 1] (29.8s)
+tau=0.75 beta0  seed=2 rmse=40.13cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 1, 1, 1] (29.2s)
+tau=0.75 beta0  seed=3 rmse=9.35cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (30.0s)
+tau=0.75 beta0  seed=4 rmse=33.83cm coll_steps=26 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[1, 1, 1, 0] (29.3s)
+tau=0.75 beta0  seed=5 rmse=9.59cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 0, 1, 1] (30.4s)
+tau=0.75 beta0  seed=6 rmse=33.03cm coll_steps=2 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[0, 1, 1, 1] (29.7s)
+tau=0.75 beta0  seed=7 rmse=40.40cm coll_steps=20 outcomes=['collision', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (30.3s)
+tau=0.75 beta0  seed=8 rmse=30.63cm coll_steps=20 outcomes=['no_block', 'no_block', 'collision', 'no_block'] alt=[1, 1, 1, 1] (30.8s)
+tau=0.75 beta0  seed=9 rmse=24.67cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (26.0s)
+tau=0.75/beta0 {'events': 40, 'collision_rate': 0.125, 'switch_rate': 0.0, 'detour_rate': 0.0, 'alt_mode_available': 0.9, 'event_max_err_mean': 0.495, 'infeasible_steps_mean': 7.625, 'rmse_mean': 0.304, 'rmse_std': 0.181, 'wall_ms': 28.033}
+tau=0.75/full {'events': 40, 'collision_rate': 0.05, 'switch_rate': 0.0, 'detour_rate': 0.0, 'alt_mode_available': 0.975, 'event_max_err_mean': 0.223, 'infeasible_steps_mean': 5.55, 'rmse_mean': 0.105, 'rmse_std': 0.019, 'wall_ms': 28.908}
+tau=0.75/n1 {'events': 40, 'collision_rate': 0.125, 'switch_rate': 0.0, 'detour_rate': 0.0, 'alt_mode_available': 0.0, 'event_max_err_mean': 0.358, 'infeasible_steps_mean': 8.6, 'rmse_mean': 0.198, 'rmse_std': 0.1, 'wall_ms': 19.755}

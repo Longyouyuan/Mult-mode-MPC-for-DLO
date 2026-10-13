@@ -1,0 +1,75 @@
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+init from E:/Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment/franka_dynamic/best_model.pt: val 0.377 cm
+epoch 001 | 264s | train 0.361 cm | val 0.387 cm | val loss 1.091e-04
+epoch 002 | 246s | train 0.352 cm | val 0.389 cm | val loss 1.085e-04
+epoch 003 | 228s | train 0.354 cm | val 0.401 cm | val loss 1.095e-04
+epoch 004 | 219s | train 0.354 cm | val 0.416 cm | val loss 1.144e-04
+epoch 005 | 216s | train 0.354 cm | val 0.399 cm | val loss 1.094e-04
+epoch 006 | 219s | train 0.352 cm | val 0.396 cm | val loss 1.108e-04
+D:\Anaconda\envs\DRL\python.exe: can't open file 'C:\\Users\\Lenovo\\AppData\\Local\\Temp\\claude\\e--Desktop-Mult-mode-MPC-for-DLO\\9f1e378d-8082-4cf6-a1a9-7fdfc9e256d3\\scratchpad\\train_encoder.py': [Errno 2] No such file or directory
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+Traceback (most recent call last):
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 121, in <module>
+    main()
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 94, in main
+    torch.set_rng_state(c["rng"]); print("resumed at epoch", start, flush=True)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\random.py", line 19, in set_rng_state
+    default_generator.set_state(new_state)
+TypeError: RNG state must be a torch.ByteTensor
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+resumed at epoch 7
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+resumed at epoch 7
+Traceback (most recent call last):
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 121, in <module>
+    main()
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 98, in main
+    tr = train_one_epoch(model, train_loader, opt, dev, ARGS["rollout_weight"])
+  File "E:\Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment\franka_model.py", line 400, in train_one_epoch
+    pred_p, pred_v, _ = model.rollout(
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 36, in rollout
+    z = self._history_to_latent(ee_p_hist, ee_v_hist, goal_p_hist, goal_v_hist)
+  File "E:\Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment\franka_model.py", line 292, in _history_to_latent
+    _, h_n = self.history_encoder(hist_seq)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\nn\modules\rnn.py", line 1392, in forward
+    result = _VF.gru(
+RuntimeError: cuDNN error: CUDNN_STATUS_INTERNAL_ERROR_HOST_ALLOCATION_FAILED
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+resumed at epoch 7
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+resumed at epoch 7
+fatal   : Memory allocation failure
+Traceback (most recent call last):
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 121, in <module>
+    main()
+  File "E:\Desktop\Mult-mode-MPC-for-DLO\test_for_real_experiment\encoder_ablation\train_encoder_ablation.py", line 98, in main
+    tr = train_one_epoch(model, train_loader, opt, dev, ARGS["rollout_weight"])
+  File "E:\Desktop/Mult-mode-MPC-for-DLO/test_for_real_experiment\franka_model.py", line 411, in train_one_epoch
+    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\nn\utils\clip_grad.py", line 30, in _no_grad_wrapper
+    return func(*args, **kwargs)
+  File "D:\Anaconda\envs\DRL\lib\site-packages\torch\nn\utils\clip_grad.py", line 86, in clip_grad_norm_
+    norms.extend(torch._foreach_norm(device_grads, norm_type))
+RuntimeError: CUDA error: unknown error
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+splits {'train': (0, 1071618), 'val': (1071618, 1260726)} sizes {'train': 53529, 'val': 9418, 'test_ee_collection_run1': 6306, 'test_ee_collection_run3': 6159}
+resumed at epoch 7
+epoch 007 | 230s | train 0.351 cm | val 0.391 cm | val loss 1.090e-04
+epoch 008 | 204s | train 0.354 cm | val 0.399 cm | val loss 1.087e-04
+epoch 009 | 205s | train 0.353 cm | val 0.374 cm | val loss 1.051e-04
+epoch 010 | 201s | train 0.352 cm | val 0.386 cm | val loss 1.054e-04
+epoch 011 | 199s | train 0.351 cm | val 0.388 cm | val loss 1.065e-04
+epoch 012 | 199s | train 0.350 cm | val 0.379 cm | val loss 1.047e-04
+epoch 013 | 199s | train 0.348 cm | val 0.384 cm | val loss 1.074e-04
+epoch 014 | 199s | train 0.350 cm | val 0.371 cm | val loss 1.056e-04
+epoch 015 | 200s | train 0.348 cm | val 0.398 cm | val loss 1.081e-04
+test ee_collection_run1 0.391 cm
+test ee_collection_run3 0.362 cm
+Done.

@@ -1,0 +1,21 @@
+Warp 1.11.1 initialized:
+   CUDA Toolkit 12.9, Driver 12.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 3060 Laptop GPU" (6 GiB, sm_86, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\Lenovo\AppData\Local\NVIDIA\warp\Cache\1.11.1
+Module common.rope_warp_4 a44d163 load on device 'cuda:0' took 1.48 ms  (cached)
+tau=0.75 full   seed=0 rmse=5.79cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (17.0s)
+tau=0.75 full   seed=1 rmse=6.41cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (21.9s)
+tau=0.75 full   seed=2 rmse=6.70cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (20.9s)
+tau=0.75 full   seed=3 rmse=5.91cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (20.8s)
+tau=0.75 full   seed=4 rmse=6.66cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (22.9s)
+tau=0.75 full   seed=5 rmse=6.56cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (21.3s)
+E:\Desktop\Mult-mode-MPC-for-DLO\controller\M2PC.py:225: UserWarning: [greedy_select] valid_n=0 (all cost >= 1.00e+05). Fallback: return first 3 indices.
+  warnings.warn(
+tau=0.75 full   seed=6 rmse=6.03cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (20.9s)
+tau=0.75 full   seed=7 rmse=6.99cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (22.5s)
+tau=0.75 full   seed=8 rmse=5.41cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (21.4s)
+tau=0.75 full   seed=9 rmse=5.81cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[1, 1, 1, 1] (23.1s)
+tau=0.75/full {'events': 40, 'collision_rate': 0.0, 'switch_rate': 0.0, 'detour_rate': 0.0, 'alt_mode_available': 1.0, 'event_max_err_mean': 0.167, 'infeasible_steps_mean': 0.525, 'rmse_mean': 0.062, 'rmse_std': 0.005, 'wall_ms': 20.778}

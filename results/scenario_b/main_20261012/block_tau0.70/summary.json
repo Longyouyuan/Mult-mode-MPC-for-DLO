@@ -1,0 +1,38 @@
+{
+  "tau=0.70/beta0": {
+    "events": 40,
+    "collision_rate": 0.425,
+    "switch_rate": 0.225,
+    "detour_rate": 0.35,
+    "alt_mode_available": 0.9,
+    "event_max_err_mean": 0.707142778141576,
+    "infeasible_steps_mean": 14.475,
+    "rmse_mean": 0.4016255350744903,
+    "rmse_std": 0.05782260342686564,
+    "wall_ms": 27.82679687487568
+  },
+  "tau=0.70/full": {
+    "events": 40,
+    "collision_rate": 0.225,
+    "switch_rate": 0.5,
+    "detour_rate": 0.275,
+    "alt_mode_available": 0.9,
+    "event_max_err_mean": 0.6212922797260984,
+    "infeasible_steps_mean": 10.475,
+    "rmse_mean": 0.3597788963048959,
+    "rmse_std": 0.18772726700736708,
+    "wall_ms": 28.10755385396381
+  },
+  "tau=0.70/n1": {
+    "events": 40,
+    "collision_rate": 0.45,
+    "switch_rate": 0.2,
+    "detour_rate": 0.35,
+    "alt_mode_available": 0.0,
+    "event_max_err_mean": 0.7941526285931607,
+    "infeasible_steps_mean": 18.35,
+    "rmse_mean": 0.4253802482683846,
+    "rmse_std": 0.03529184234051186,
+    "wall_ms": 20.03782870816091
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "dt": 0.001,
+  "ctr_period": 25,
+  "horizon": 35,
+  "n_sample": 402,
+  "n_improve": 1,
+  "noise_scale": 1.5,
+  "top_k_good": 200,
+  "wj": 850.0,
+  "prior_weight": 1.0,
+  "action_low": -5.0,
+  "action_high": 5.0,
+  "beta_full": 600.0,
+  "task": "line",
+  "task_duration": 5.0,
+  "n_steps": 440,
+  "line_amp": 0.9,
+  "line_vmax": 1.2,
+  "min_event_step": 100,
+  "pillar_xy": [
+    0.0,
+    0.9
+  ],
+  "pillar_radius": 0.05,
+  "pillar_half_h": 0.5,
+  "pillar_center_z": 0.55,
+  "block": true,
+  "tau": 0.4,
+  "block_offset": 0.1,
+  "start_offset": 0.1,
+  "move_time": 0.001,
+  "hold_after": 0.6,
+  "event_window_after": 1.0,
+  "controllers": [
+    "full",
+    "n1",
+    "beta0"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "taus": [
+    0.8
+  ]
+}

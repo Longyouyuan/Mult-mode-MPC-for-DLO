@@ -1,0 +1,19 @@
+Warp 1.11.1 initialized:
+   CUDA Toolkit 12.9, Driver 12.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 3060 Laptop GPU" (6 GiB, sm_86, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\Lenovo\AppData\Local\NVIDIA\warp\Cache\1.11.1
+Module common.rope_warp_4 a44d163 load on device 'cuda:0' took 3.48 ms  (cached)
+tau=0.75 n1     seed=0 rmse=6.57cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.9s)
+tau=0.75 n1     seed=1 rmse=6.55cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (19.1s)
+tau=0.75 n1     seed=2 rmse=6.92cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.4s)
+tau=0.75 n1     seed=3 rmse=6.84cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.3s)
+tau=0.75 n1     seed=4 rmse=5.52cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (20.4s)
+tau=0.75 n1     seed=5 rmse=7.37cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.9s)
+tau=0.75 n1     seed=6 rmse=7.20cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.7s)
+tau=0.75 n1     seed=7 rmse=5.56cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (20.1s)
+tau=0.75 n1     seed=8 rmse=5.60cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (19.1s)
+tau=0.75 n1     seed=9 rmse=6.81cm coll_steps=0 outcomes=['no_block', 'no_block', 'no_block', 'no_block'] alt=[0, 0, 0, 0] (18.1s)
+tau=0.75/n1 {'events': 40, 'collision_rate': 0.0, 'switch_rate': 0.0, 'detour_rate': 0.0, 'alt_mode_available': 0.0, 'event_max_err_mean': 0.172, 'infeasible_steps_mean': 1.425, 'rmse_mean': 0.065, 'rmse_std': 0.007, 'wall_ms': 15.715}

@@ -58,7 +58,7 @@ n_sample = 402 * 1  # Nearest multiple of 3 to the paper's nominal 400, enabling
 m_modes = 3
 assert n_sample % m_modes == 0
 
-n_improve = 10 # set it as 1 to reproduce the paper
+n_improve = 1 # set it as 1 to reproduce the paper
 noise_scale = 1.5
 action_dim = 3
 limits = torch.tensor([-5.0, 5.0])

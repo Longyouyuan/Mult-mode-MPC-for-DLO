@@ -1,0 +1,51 @@
+E:\Desktop\Mult-mode-MPC-for-DLO\controller\M2PC.py:225: UserWarning: [greedy_select] valid_n=0 (all cost >= 1.00e+05). Fallback: return first 3 indices.
+  warnings.warn(
+Warp 1.11.1 initialized:
+   CUDA Toolkit 12.9, Driver 12.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 3060 Laptop GPU" (6 GiB, sm_86, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\Lenovo\AppData\Local\NVIDIA\warp\Cache\1.11.1
+Module common.rope_warp_4 a44d163 load on device 'cuda:0' took 3.16 ms  (cached)
+tau=0.75 full   seed=10 rmse=16.29cm coll_steps=0 outcomes=['switch', 'switch', 'detour', 'switch'] alt=[1, 1, 1, 1] (27.9s)
+tau=0.75 full   seed=11 rmse=19.04cm coll_steps=0 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (29.3s)
+tau=0.75 full   seed=12 rmse=29.71cm coll_steps=16 outcomes=['collision', 'detour', 'switch', 'switch'] alt=[1, 0, 1, 1] (30.7s)
+tau=0.75 full   seed=13 rmse=27.96cm coll_steps=0 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (28.9s)
+tau=0.75 full   seed=14 rmse=36.71cm coll_steps=39 outcomes=['switch', 'collision', 'collision', 'detour'] alt=[1, 1, 0, 1] (28.0s)
+tau=0.75 full   seed=15 rmse=32.46cm coll_steps=0 outcomes=['switch', 'switch', 'detour', 'switch'] alt=[1, 1, 1, 1] (29.4s)
+WARNING: Nan, Inf or huge value in QACC at DOF 25. The simulation is unstable. Time = 8.3240.
+
+tau=0.75 full   seed=16 rmse=58.27cm coll_steps=14 outcomes=['switch', 'collision', 'detour', 'detour'] alt=[1, 1, 1, 1] (28.6s)
+tau=0.75 full   seed=17 rmse=34.56cm coll_steps=10 outcomes=['collision', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (30.0s)
+tau=0.75 full   seed=18 rmse=25.47cm coll_steps=10 outcomes=['switch', 'switch', 'collision', 'switch'] alt=[1, 1, 1, 1] (29.2s)
+tau=0.75 full   seed=19 rmse=33.37cm coll_steps=7 outcomes=['switch', 'switch', 'switch', 'collision'] alt=[1, 1, 1, 1] (29.6s)
+tau=0.75 n1     seed=10 rmse=43.79cm coll_steps=56 outcomes=['collision', 'switch', 'collision', 'collision'] alt=[0, 0, 0, 0] (26.0s)
+tau=0.75 n1     seed=11 rmse=33.93cm coll_steps=0 outcomes=['detour', 'detour', 'switch', 'detour'] alt=[0, 0, 0, 0] (24.6s)
+tau=0.75 n1     seed=12 rmse=26.90cm coll_steps=10 outcomes=['detour', 'collision', 'detour', 'switch'] alt=[0, 0, 0, 0] (25.7s)
+tau=0.75 n1     seed=13 rmse=12.03cm coll_steps=0 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[0, 0, 0, 0] (25.8s)
+tau=0.75 n1     seed=14 rmse=47.68cm coll_steps=66 outcomes=['collision', 'switch', 'collision', 'collision'] alt=[0, 0, 0, 0] (26.2s)
+tau=0.75 n1     seed=15 rmse=43.77cm coll_steps=43 outcomes=['collision', 'detour', 'collision', 'collision'] alt=[0, 0, 0, 0] (25.8s)
+WARNING: Nan, Inf or huge value in QACC at DOF 89. The simulation is unstable. Time = 9.6020.
+
+tau=0.75 n1     seed=16 rmse=88.90cm coll_steps=24 outcomes=['switch', 'collision', 'collision', 'detour'] alt=[0, 0, 0, 0] (25.6s)
+tau=0.75 n1     seed=17 rmse=42.08cm coll_steps=7 outcomes=['detour', 'detour', 'switch', 'collision'] alt=[0, 0, 0, 0] (26.0s)
+tau=0.75 n1     seed=18 rmse=24.74cm coll_steps=0 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[0, 0, 0, 0] (25.3s)
+tau=0.75 n1     seed=19 rmse=21.00cm coll_steps=0 outcomes=['detour', 'switch', 'switch', 'switch'] alt=[0, 0, 0, 0] (26.6s)
+tau=0.75 beta0  seed=10 rmse=23.90cm coll_steps=0 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (30.3s)
+tau=0.75 beta0  seed=11 rmse=33.55cm coll_steps=10 outcomes=['switch', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (29.7s)
+tau=0.75 beta0  seed=12 rmse=36.94cm coll_steps=0 outcomes=['detour', 'switch', 'detour', 'detour'] alt=[1, 1, 1, 0] (30.9s)
+tau=0.75 beta0  seed=13 rmse=46.53cm coll_steps=25 outcomes=['switch', 'collision', 'collision', 'detour'] alt=[1, 1, 1, 1] (27.2s)
+WARNING: Nan, Inf or huge value in QACC at DOF 89. The simulation is unstable. Time = 8.2230.
+
+tau=0.75 beta0  seed=14 rmse=55.34cm coll_steps=22 outcomes=['collision', 'detour', 'collision', 'switch'] alt=[1, 1, 0, 1] (28.2s)
+tau=0.75 beta0  seed=15 rmse=41.06cm coll_steps=16 outcomes=['switch', 'detour', 'detour', 'collision'] alt=[1, 1, 0, 1] (26.3s)
+WARNING: Nan, Inf or huge value in QACC at DOF 107. The simulation is unstable. Time = 6.1250.
+
+tau=0.75 beta0  seed=16 rmse=132.92cm coll_steps=6 outcomes=['collision', 'detour', 'switch', 'switch'] alt=[1, 0, 1, 0] (26.9s)
+tau=0.75 beta0  seed=17 rmse=29.85cm coll_steps=2 outcomes=['switch', 'detour', 'switch', 'collision'] alt=[1, 1, 1, 1] (25.1s)
+tau=0.75 beta0  seed=18 rmse=48.34cm coll_steps=37 outcomes=['collision', 'detour', 'collision', 'detour'] alt=[1, 1, 0, 1] (24.8s)
+tau=0.75 beta0  seed=19 rmse=22.99cm coll_steps=0 outcomes=['detour', 'switch', 'switch', 'switch'] alt=[1, 1, 1, 1] (25.6s)
+tau=0.75/beta0 {'events': 40, 'collision_rate': 0.225, 'switch_rate': 0.475, 'detour_rate': 0.3, 'alt_mode_available': 0.85, 'event_max_err_mean': 0.831, 'infeasible_steps_mean': 10.725, 'rmse_mean': 0.471, 'rmse_std': 0.303, 'wall_ms': 24.944}
+tau=0.75/full {'events': 40, 'collision_rate': 0.175, 'switch_rate': 0.675, 'detour_rate': 0.15, 'alt_mode_available': 0.95, 'event_max_err_mean': 0.524, 'infeasible_steps_mean': 11.075, 'rmse_mean': 0.314, 'rmse_std': 0.109, 'wall_ms': 27.222}
+tau=0.75/n1 {'events': 40, 'collision_rate': 0.325, 'switch_rate': 0.425, 'detour_rate': 0.25, 'alt_mode_available': 0.0, 'event_max_err_mean': 0.674, 'infeasible_steps_mean': 13.6, 'rmse_mean': 0.385, 'rmse_std': 0.201, 'wall_ms': 20.266}

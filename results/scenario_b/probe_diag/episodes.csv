@@ -1,0 +1,2 @@
+controller,seed,tau,block,rmse,max_err,collision_steps,infeasible_steps,wall_mean_ms
+n1,0,0.4,False,0.14626893202121422,0.35904813106777655,0,6,12.595037955113433

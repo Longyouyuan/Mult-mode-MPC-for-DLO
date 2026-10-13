@@ -1,0 +1,38 @@
+{
+  "tau=0.40/beta0": {
+    "events": 6,
+    "collision_rate": 0.3333333333333333,
+    "switch_rate": 0.0,
+    "detour_rate": 0.0,
+    "alt_mode_available": 0.5,
+    "event_max_err_mean": 0.4824843159376618,
+    "infeasible_steps_mean": 9.666666666666666,
+    "rmse_mean": 0.25769860281287954,
+    "rmse_std": 0.03966348664480708,
+    "wall_ms": 16.905373863383744
+  },
+  "tau=0.40/full": {
+    "events": 6,
+    "collision_rate": 0.16666666666666666,
+    "switch_rate": 0.0,
+    "detour_rate": 0.0,
+    "alt_mode_available": 0.6666666666666666,
+    "event_max_err_mean": 0.2541643314074919,
+    "infeasible_steps_mean": 9.166666666666666,
+    "rmse_mean": 0.10644688966695104,
+    "rmse_std": 0.03430107366447189,
+    "wall_ms": 17.037532953591754
+  },
+  "tau=0.40/n1": {
+    "events": 6,
+    "collision_rate": 0.16666666666666666,
+    "switch_rate": 0.0,
+    "detour_rate": 0.0,
+    "alt_mode_available": 0.0,
+    "event_max_err_mean": 0.3520073199714307,
+    "infeasible_steps_mean": 11.166666666666666,
+    "rmse_mean": 0.178262077294436,
+    "rmse_std": 0.020574471436925895,
+    "wall_ms": 13.085038068476768
+  }
+}
