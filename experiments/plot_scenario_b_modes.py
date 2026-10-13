@@ -103,7 +103,7 @@ def main():
         S, F = 0.7, 0.9
         plt.rcParams.update({"font.family": "serif", "mathtext.fontset": "stix",
                              "font.serif": ["Times New Roman", "DejaVu Serif"]})
-    figsize = (7.16, 2.5) if args.paper else (15.5, 4.2)
+    figsize = (7.16, 2.3) if args.paper else (15.5, 4.2)
     txt_switch = "mode switch" if args.paper else "switched to alternative mode"
     txt_infeas = "all samples collide" if args.paper else "all samples in collision"
 
@@ -206,8 +206,8 @@ def main():
     out = args.run / f"scenario_b_modes_tau{args.tau:.2f}_seed{args.seed}_ev{args.event}"
     if args.paper:
         out = Path(str(out) + "_paper")
-    fig.savefig(str(out) + ".png", dpi=250, bbox_inches="tight")
-    fig.savefig(str(out) + ".pdf", bbox_inches="tight")
+    fig.savefig(str(out) + ".png", dpi=250, bbox_inches="tight", pad_inches=0.01)
+    fig.savefig(str(out) + ".pdf", bbox_inches="tight", pad_inches=0.01)
     print("saved", str(out) + ".png")
 
 
